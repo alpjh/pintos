@@ -42,11 +42,11 @@ int count_token(const char* str) {
 /* Command Line Parsing */
 void argument_stack(char **parse, int count, void **esp) {
     
+    //Declaration of String 
     char **argv_ptrs;
     int i, j;
-
     argv_ptrs = (char**)malloc(sizeof(char*)*(count+1));
-    argv_ptrs[count] = 0;
+    argv_ptrs[count] = 0;    
     
     //Push argument n~1 into stack
     for(i=count-1;i>-1;i--) {
@@ -56,23 +56,24 @@ void argument_stack(char **parse, int count, void **esp) {
         }
         argv_ptrs[i] = *esp; // storing address
     }
-    //word-align
+    //Word-align
     //For fast memory read
     while(*(int*)esp%4 != 0) {
         *esp -= 1;
         **(char**)esp = 0;
     }
-    //push argv pointers
+
+    //Push argv pointers
     for(i=count;i>-1;i--) {
         *esp -= 4;
         **(long**)esp = (long)argv_ptrs[i];
     }
-    //push argv, argc
+    //Push argv, argc
     *esp -= 4;
     **(long**)esp = (long)(*esp+4);
     *esp -= 4;
     **(int**)esp = count;
-    //fake return address
+    //Fake return address
     *esp -= 4;
     **(long**)esp = 0;
 
@@ -127,17 +128,19 @@ start_process (void *file_name_)
   struct intr_frame if_;
   bool success;
 
+  //Declaration variables for parsing
   char **parse;
   char *token = NULL;
   char *save_pointer = NULL;
   int count = 0;
   int i = 0;
+
   /* Parse all tokens from arguments and count it */
   parse = palloc_get_page (0);
   for (token = strtok_r (file_name, " ", &save_pointer); token != NULL;
           token = strtok_r (NULL, " ", &save_pointer)) {                
       parse[count] = palloc_get_page (0);                            
-      strlcpy(parse[count], token, strlen(token) + 1);                                
+      strlcpy(parse[count], token, strlen(token) + 1);
       count++;                                  
   } 
   
@@ -150,7 +153,7 @@ start_process (void *file_name_)
 
   /* If load failed, quit. */
   if (!success) {
-      printf("not successsssssssss");
+      //printf("not successsssssssss");
       for(i=0; i<count; i++)
           palloc_free_page (parse[i]);
       palloc_free_page (parse);
@@ -160,7 +163,7 @@ start_process (void *file_name_)
   else {
       /* Store parsed arguments into stack and dump it */      
       argument_stack(parse, count, &if_.esp);
-      /* debug dump for the argument */      
+      /* Debug for argument argument*/      
       hex_dump(if_.esp, if_.esp, PHYS_BASE - if_.esp, true);      
   }
   
