@@ -22,84 +22,48 @@ static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
 
 
-/* Command line parsing */
-/*void argument_stack(char **parse, int count, void **esp) {
-    
-    void *arg_addr[count];
-    int len;
 
-    for(int i=count; i>0; i--) {
-        len = strlen(argv[i]);
-        *esp -= len;
-        strcpy(*esp, argv[i]);
-        arg_addr[i] = *esp;
-    }
-    
-    *esp -= 4;
-    **esp = 0;
-    
-    for (int i=count; i>0; i--) {
-        *esp -= 4;
-        **esp = arg_addr[i];
-    }
-
-    void *esp_backup = *esp;
-    *esp -= 4;
-    **esp = esp_backup;
-    
-    *esp -= 4;
-    **esp = count;
-    
-    *esp -= 4;
-    **esp = 0;
-
-    }
-*/
-int count_token(const char* str) 
+int count_token(const char* str) {
     // counting number of tokens before the allocation
-{
     int i;
     int count = 0;
     if(str == NULL)
         return 0;
 
-    for(i=0;i<(int)strlen(str)+1;i++)
-    {
-        if(str[i] == ' ')
-        {
-            if(i == 0 || str[i-1] != ' ')
-                count++;
+    for(i=0;i<(int)strlen(str)+1;i++) {
+        if(str[i] == ' ') {
+            if (i == 0 || str[i-1] != ' ')
+               count++;
         }
     }
     return count+1;
 }
 
-void argument_stack(char **parse, int count, void **esp)
-{
+/* Command Line Parsing */
+void argument_stack(char **parse, int count, void **esp) {
+    
     char **argv_ptrs;
     int i, j;
 
     argv_ptrs = (char**)malloc(sizeof(char*)*(count+1));
     argv_ptrs[count] = 0;
-    //push argument n~1 into stack
-    for(i=count-1;i>-1;i--)
-    {
-        for(j=strlen(parse[i]);j>-1;j--)
-        {
+    
+    //Push argument n~1 into stack
+    for(i=count-1;i>-1;i--) {
+        for(j=strlen(parse[i]);j>-1;j--) {
             *esp -= 1;
             **(char**)esp = parse[i][j];
         }
         argv_ptrs[i] = *esp; // storing address
     }
-    //word-alogn
-    while(*(int*)esp%4 != 0)
-    {
+    //word-align
+    //For fast memory read
+    while(*(int*)esp%4 != 0) {
         *esp -= 1;
         **(char**)esp = 0;
     }
     //push argv pointers
-    for(i=count;i>-1;i--)
-    {
+    for(i=count;i>-1;i--) {
         *esp -= 4;
         **(long**)esp = (long)argv_ptrs[i];
     }
