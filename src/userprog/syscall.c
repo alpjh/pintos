@@ -3,6 +3,9 @@
 #include <syscall-nr.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#include <devices/shutdown.h>
+#include <threads/thread.h>
+#include <filesys/filesys.h>
 
 static void syscall_handler (struct intr_frame *);
 
@@ -14,23 +17,24 @@ syscall_init (void)
 
 void get_argument(void *esp, int *arg, int count) {
 
-    /* Copy inza in UserStack to Kernel */
+    int i;
+    int *ptr;
+
+    /* Copy Value in UserStack to Kernel */    
     esp += 4;
     
     for (i=0; i<count; i++) {
-      arg[i] = *(esp+(i*4));       
+      ptr = *(esp+(i*4));       
       check_address(esp+(i*4));
+      arg[i] = *ptr;
     }
-    
-    /* If inza in USER*/
 
 }
-
+/* Check address of pointer point user domain */
 void check_address() {
-    if(! (0x804800000 < addr && addr < 0xc00000000))
+    if(!(0x80480000 < addr && addr < 0xc0000000))
         exit(-1);
-} // need value soojung
-
+}
 
 static void
 syscall_handler (struct intr_frame *f) 
