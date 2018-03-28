@@ -8,6 +8,8 @@
 #include <filesys/filesys.h>
 
 static void syscall_handler (struct intr_frame *);
+void check_address(void *addr);
+void get_argument(void *esp, int *arg, int count);
 void halt(void);
 void exit(int status);
 bool create(const char *file, unsigned initial_size);
@@ -16,27 +18,6 @@ bool remove(const char *file);
 void
 syscall_init (void) {
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
-}
-
-void get_argument(void *esp, int *arg, int count) {
-
-    int i;
-    int *ptr;
-
-    /* Copy Value in UserStack to Kernel */    
-    esp += 4;
-    
-    for (i=0; i<count; i++) {
-      ptr = (int *)esp + i;       
-      check_address(esp+(i*4));
-      arg[i] = *ptr;
-    }
-
-}
-/* Check address of pointer point user domain */
-void check_address(void *addr) {
-    if(!(0x80480000 < addr && addr <0xc0000000))
-        exit(-1);
 }
 
 static void
@@ -68,8 +49,28 @@ syscall_handler (struct intr_frame *f) {
         check_address(arg[0]);
         f->eax = remove((const char *)arg[0]);
         break;
-  }
-  
+  }  
+}
+
+/* Check address of pointer point user domain */
+void check_address(void *addr) {
+    if(!(0x80480000 < addr && addr <0xc0000000))
+        exit(-1);
+}
+
+/* Copy Value in UserStack to Kernel */    
+void get_argument(void *esp, int *arg, int count) {
+    
+    int i;
+    int *ptr;
+    esp += 4;
+
+    for (i=0; i<count; i++) {
+        ptr = (int *)esp + i;       
+        check_address(esp+(i*4));
+        arg[i] = *ptr;
+    }
+
 }
 
 void halt(void) {
