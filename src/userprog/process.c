@@ -64,6 +64,7 @@ void argument_stack(char **parse, int count, void **esp) {
     }
 
     //Push argv pointers
+    //프로그램 이름,인자의 주소
     for(i=count;i>-1;i--) {
         *esp -= 4;
         **(long**)esp = (long)argv_ptrs[i];
@@ -149,7 +150,7 @@ start_process (void *file_name_)
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
-  success = load (parse[0], &if_.eip, &if_.esp);
+  success = load (parse[0], &if_.eip, &if_.esp); //file name (parse[0])
 
   /* If load failed, quit. */
   if (!success) {
@@ -164,7 +165,8 @@ start_process (void *file_name_)
       /* Store parsed arguments into stack and dump it */      
       argument_stack(parse, count, &if_.esp);
       /* Debug for argument argument*/      
-      hex_dump(if_.esp, if_.esp, PHYS_BASE - if_.esp, true);      
+      hex_dump(if_.esp, if_.esp, PHYS_BASE - if_.esp, true);   
+      // hex_dump는 메모리를 16진수 형태로 화면에 출력한다.   
   }
   
   palloc_free_page (file_name);
