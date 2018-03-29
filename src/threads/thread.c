@@ -470,6 +470,25 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority = priority;
   t->magic = THREAD_MAGIC;
   list_push_back (&all_list, &t->allelem);
+
+  /*
+  //Initialize
+  list_init(t->child_elem);
+  list_push_back(thread_current()->child_list, t->child_elem);
+
+    //memory
+    bool loaded;
+    //if exit?
+    bool exited;
+    //exit semaphore
+    struct semaphore exit_sema;
+    sema_init(&t->exit_sema);
+    //load semaphore
+    struct semaphore load_sema;
+    sema_init(&t->load_sema);
+    //exit status
+    int status;
+ */
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and

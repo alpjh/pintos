@@ -20,8 +20,32 @@
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
+/*
+struct thread *get_child_process (int pid) {
+
+    struct thread *cur = thread_current();
+    struct list_elem *elem = cur->child_list.head.next;
+    
+    for () {
+        // list_entry ();
+        //  list_next(); 
+        if(pid == t->tid)
+            return t;
+    }
+
+    return NULL;
+
+    cur->child_list;
+}
 
 
+void removr_child_process (struct thread *cp) {
+
+    list_remove(cp->parent->child_list, cp->child_elem);
+
+    palloc_free_page(cp);
+}
+*/
 
 int count_token(const char* str) {
     // counting number of tokens before the allocation
@@ -151,7 +175,11 @@ start_process (void *file_name_)
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
   success = load (parse[0], &if_.eip, &if_.esp); //file name (parse[0])
+/*
+  thread_current()->loaded = success;
 
+  sema_up(thread_current()->load_sema);
+*/
   /* If load failed, quit. */
   if (!success) {
       //printf("not successsssssssss");
@@ -197,7 +225,17 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
+/*  
+  struct thread *child = get_child_process(child_tid);
+
+  sema_down (&child->exit_sema);
+
+  remove_child_process(child);
+
+  return child->exit_code;
+*/
   return -1;
+  
 }
 
 /* Free the current process's resources. */

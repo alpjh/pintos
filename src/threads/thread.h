@@ -100,6 +100,24 @@ struct thread
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
+    /*
+    //parent process discropter
+    struct thread *parent;
+    //child list element
+    struct thread *child_elem;
+    //child list
+    struct list child_list;
+    //memory
+    bool loaded;
+    //if exit?
+    bool exited;
+    //exit semaphore
+    struct semaphore exit_sema;
+    //load semaphore
+    struct semaphore load_sema;
+    //exit status
+    int status;
+    */
   };
 
 /* If false (default), use round-robin scheduler.
