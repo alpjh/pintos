@@ -20,32 +20,46 @@
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
-/*
+
+/* Find child element that equal pid argument */
 struct thread *get_child_process (int pid) {
 
+    //Get current thread to cur
     struct thread *cur = thread_current();
-    struct list_elem *elem = cur->child_list.head.next;
+    //Get head of child list to elem
+    struct list_elem *elem = list_begin(&cur->child_list);
+    //For store next element
+    struct list_elem *next;
     
-    for () {
-        // list_entry ();
-        //  list_next(); 
-        if(pid == t->tid)
-            return t;
-    }
+    //Find equal element
+    while (elem != list_end(&cur -> child_list)) {
 
+        //List entry
+        struct thread *cp = list_entry(elem, struct thread, child_elem);
+        
+        //Save next list in next variable
+        next = list_next(elem); 
+        
+        //If same child in child_list, return 
+        if (pid == cur->tid)
+            return cur;
+        //Go to next child 
+        cur = next;
+
+    }
+    //No matching child
     return NULL;
 
-    cur->child_list;
 }
 
 
-void removr_child_process (struct thread *cp) {
-
-    list_remove(cp->parent->child_list, cp->child_elem);
-
+void remove_child_process (struct thread *cp) {
+    //remove child process
+    list_remove(&cp->child_elem);
+    //free memory
     palloc_free_page(cp);
 }
-*/
+
 
 int count_token(const char* str) {
     // counting number of tokens before the allocation
@@ -175,28 +189,28 @@ start_process (void *file_name_)
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
   success = load (parse[0], &if_.eip, &if_.esp); //file name (parse[0])
-/*
+
   thread_current()->loaded = success;
 
-  sema_up(thread_current()->load_sema);
-*/
+  sema_up(&thread_current()->load_sema);
+
   /* If load failed, quit. */
   if (!success) {
-      //printf("not successsssssssss");
-      for(i=0; i<count; i++)
-          palloc_free_page (parse[i]);
-      palloc_free_page (parse);
-          
+      thread_current() -> loaded = false;    
       thread_exit ();
   }
   else {
+      thread_current() -> loaded = true;
+
       /* Store parsed arguments into stack and dump it */      
       argument_stack(parse, count, &if_.esp);
-      /* Debug for argument argument*/      
+      
+      /* Debug for argument argument
       hex_dump(if_.esp, if_.esp, PHYS_BASE - if_.esp, true);   
       // hex_dump는 메모리를 16진수 형태로 화면에 출력한다.   
+      */
   }
-  
+
   palloc_free_page (file_name);
   
   for(i=0; i<count; i++) 

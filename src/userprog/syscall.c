@@ -20,33 +20,36 @@ void
 syscall_init (void) {
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
-/*
-tid_t exec(const char *cmd_line) {
-    struct thread *child;
 
-    //process create
-    int pid = process_execute (cmd_line);
-    //Search discropter of created child process
-    child = get_child_process(pid);
+int exec(const char *cmd_line) {
+
+    //Process create
+    int pid = process_exequte(cmd_line);
+
+    //Find child process
+    struct thread *child = get_child_process(pid);
+
     //wait for child process tapjae
-    sema_down(child->load_sema);
-    //if fail -1 return
+    sema_down(&child->load_sema);
+    
+    //if load success, return pid
     if (child->loaded) 
         return pid;
+    //if load fail, return -1
     else
         return -1;
 
 }
-*/
+
 static void
 syscall_handler (struct intr_frame *f) {
 
-  int *esp = f->esp;// Get stack pointer
-  check_address(esp); // 주소값이 유효한지 확인
+  uint32_t *esp = f->esp;// Get user stack pointer
+  check_address((void *)esp); // 주소값이 유효한지 확인
   int syscall_nr = *esp; 
   int arg[5];
-  printf("\n%d\n", syscall_nr);
 
+  printf("system call number : %d\n", syscall_nr);
   /* System Call switch */
   switch(syscall_nr) {
       //HALT
@@ -56,22 +59,26 @@ syscall_handler (struct intr_frame *f) {
       //EXIT
       case SYS_EXIT :
         get_argument(esp, arg, 1);
-        check_address(arg[0]);
         exit(arg[0]);
         f->eax = (arg[0]);
         break;
       //CREATE
       case SYS_CREATE :
         get_argument(esp, arg, 2);
-        check_address(arg[0]);
         f->eax = create((const char *)arg[0], (const char *)arg[1]);
         break;
       //REMOVE
       case SYS_REMOVE :
         get_argument(esp, arg, 1);
-        check_address(arg[0]);
         f->eax = remove((const char *)arg[0]);
         break;
+      case SYS_EXEC :
+        get_argument(esp, arg, 1);
+        f->eas = exec((const char *)arg[0]);
+        break;
+      defaule :
+        printf("Not system call! \n");
+        thread_exit();
   }  
 }
 
@@ -102,8 +109,6 @@ void halt(void) {
 
 void exit(int status) {
 	struct thread *current = thread_current(); //실행중인 스레드 구조체 정보	
-    //if(thread_alive(current->parent)
-    //    current->exit_status = status;
 	printf("%s: exit(%d)\n", current->name, status); // 스레드 이름과 exit status 출력
 	thread_exit(); // 스레드 종료
 }
@@ -115,11 +120,9 @@ bool create(const char *file, unsigned initial_size) {
 
 bool remove(const char *file) {
 	bool success = filesys_remove(file); // 파일 이름에 해당하는 파일 제거
-    printf("renive");
 	return success; //파일 제거에 성공하면 true리턴 
 }
 
 int wait(int pid) {
     return process_wait(pid);
 }
-
