@@ -21,10 +21,10 @@ syscall_init (void) {
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
 
-int exec(const char *cmd_line) {
+tid_t exec(const char *cmd_line) {
 
     //Process create
-    int pid = process_exequte(cmd_line);
+    tid_t pid = process_execute(cmd_line);
 
     //Find child process
     struct thread *child = get_child_process(pid);
@@ -62,6 +62,14 @@ syscall_handler (struct intr_frame *f) {
         exit(arg[0]);
         f->eax = (arg[0]);
         break;
+      case SYS_EXEC :
+        get_argument(esp, arg, 1);
+        f->eax = exec((const char *)arg[0]);
+        break;
+      case SYS_WAIT :
+        get_argument(esp, arg, 1);
+        f->eax = wait(arg[0]);
+        break;
       //CREATE
       case SYS_CREATE :
         get_argument(esp, arg, 2);
@@ -72,13 +80,9 @@ syscall_handler (struct intr_frame *f) {
         get_argument(esp, arg, 1);
         f->eax = remove((const char *)arg[0]);
         break;
-      case SYS_EXEC :
-        get_argument(esp, arg, 1);
-        f->eas = exec((const char *)arg[0]);
-        break;
-      defaule :
+     /*default :
         printf("Not system call! \n");
-        thread_exit();
+        thread_exit();*/
   }  
 }
 
@@ -108,7 +112,9 @@ void halt(void) {
 }
 
 void exit(int status) {
-	struct thread *current = thread_current(); //실행중인 스레드 구조체 정보	
+	struct thread *current = thread_current(); //실행중인 스레드 구조체 정보
+    /* 프로세스 디스크립터에 exit status 저장 */
+    current -> exit_status = status;
 	printf("%s: exit(%d)\n", current->name, status); // 스레드 이름과 exit status 출력
 	thread_exit(); // 스레드 종료
 }
@@ -123,6 +129,6 @@ bool remove(const char *file) {
 	return success; //파일 제거에 성공하면 true리턴 
 }
 
-int wait(int pid) {
-    return process_wait(pid);
+int wait(tid_t tid) {
+    return process_wait(tid);
 }
