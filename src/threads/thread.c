@@ -206,6 +206,18 @@ thread_create (const char *name, int priority,
 
   intr_set_level (old_level);
 
+  /* 부모 프로세스 저장 */
+  t->parent = thread_current();
+  /* 프로그램이 로드되지 않음 */
+  t->loaded = false;
+  /* 프로세스가 종료되지 않음 */ 
+  t->exited = false;
+  /* exit 세마포어 0으로 초기화 */ 
+  sema_init(&t->exit_sema , 0);
+  /* load 세마포어 0으로 초기화 */
+  sema_init(&t->load_sema , 0);
+  /* 자식 리스트에 추가 */
+  list_push_back(&thread_current()->child_list, &t->child_elem);
   /* Add to run queue. */
   thread_unblock (t);
 
@@ -289,6 +301,7 @@ void
 thread_exit (void) 
 {
   ASSERT (!intr_context ());
+  struct thread *t = thread_current();
 
 #ifdef USERPROG
   process_exit ();
@@ -300,6 +313,13 @@ thread_exit (void)
   intr_disable ();
   list_remove (&thread_current()->allelem);
   thread_current ()->status = THREAD_DYING;
+
+  /* 프로세스 디스크립터에 프로세스 종료를 알림 */ 
+  t->exited = true;
+
+  /* 부모프로세스의 대기 상태 이탈(세마포어 이용) */
+  sema_up(&t -> exit_sema);
+
   schedule ();
   NOT_REACHED ();
 }
@@ -462,7 +482,7 @@ init_thread (struct thread *t, const char *name, int priority)
   ASSERT (t != NULL);
   ASSERT (PRI_MIN <= priority && priority <= PRI_MAX);
   ASSERT (name != NULL);
-
+  
   memset (t, 0, sizeof *t);
   t->status = THREAD_BLOCKED;
   strlcpy (t->name, name, sizeof t->name);
@@ -471,24 +491,10 @@ init_thread (struct thread *t, const char *name, int priority)
   t->magic = THREAD_MAGIC;
   list_push_back (&all_list, &t->allelem);
 
-  /*
-  //Initialize
-  list_init(t->child_elem);
-  list_push_back(thread_current()->child_list, t->child_elem);
+  
+  //Initialize child list
+  list_init(&t->child_list);
 
-    //memory
-    bool loaded;
-    //if exit?
-    bool exited;
-    //exit semaphore
-    struct semaphore exit_sema;
-    sema_init(&t->exit_sema);
-    //load semaphore
-    struct semaphore load_sema;
-    sema_init(&t->load_sema);
-    //exit status
-    int status;
- */
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
@@ -560,7 +566,9 @@ thread_schedule_tail (struct thread *prev)
   if (prev != NULL && prev->status == THREAD_DYING && prev != initial_thread) 
     {
       ASSERT (prev != cur);
+      /* Not remove process discripter
       palloc_free_page (prev);
+      */
     }
 }
 

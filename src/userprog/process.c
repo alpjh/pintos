@@ -23,7 +23,6 @@ static bool load (const char *cmdline, void (**eip) (void), void **esp);
 
 /* Find child element that equal pid argument */
 struct thread *get_child_process (int pid) {
-
     //Get current thread to cur
     struct thread *cur = thread_current();
     //Get head of child list to elem
@@ -39,13 +38,13 @@ struct thread *get_child_process (int pid) {
         
         //Save next list in next variable
         next = list_next(elem); 
-        
+         
         //If same child in child_list, return 
-        if (pid == cur->tid)
-            return cur;
+        if (pid == cp->tid) {
+            return cp;
+        }
         //Go to next child 
-        cur = next;
-
+        elem = next;
     }
     //No matching child
     return NULL;
@@ -54,6 +53,7 @@ struct thread *get_child_process (int pid) {
 
 
 void remove_child_process (struct thread *cp) {
+
     //remove child process
     list_remove(&cp->child_elem);
     //free memory
@@ -190,8 +190,6 @@ start_process (void *file_name_)
   if_.eflags = FLAG_IF | FLAG_MBS;
   success = load (parse[0], &if_.eip, &if_.esp); //file name (parse[0])
 
-  thread_current()->loaded = success;
-
   sema_up(&thread_current()->load_sema);
 
   /* If load failed, quit. */
@@ -205,10 +203,10 @@ start_process (void *file_name_)
       /* Store parsed arguments into stack and dump it */      
       argument_stack(parse, count, &if_.esp);
       
-      /* Debug for argument argument
+      // Debug for argument argument
       hex_dump(if_.esp, if_.esp, PHYS_BASE - if_.esp, true);   
       // hex_dump는 메모리를 16진수 형태로 화면에 출력한다.   
-      */
+      
   }
 
   palloc_free_page (file_name);
@@ -242,7 +240,6 @@ process_wait (tid_t child_tid UNUSED)
 
   /* 자식 프로세스의 프로세스 디스크립터 검색 */
   struct thread *child = get_child_process(child_tid);
-
   /* 예외 처리 발생시 -1 리턴 */ 
   if(!child)
       return -1;

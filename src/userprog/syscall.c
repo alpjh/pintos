@@ -22,7 +22,7 @@ syscall_init (void) {
 }
 
 tid_t exec(const char *cmd_line) {
-
+printf("\nexec call\n");
     //Process create
     tid_t pid = process_execute(cmd_line);
 
@@ -49,6 +49,7 @@ syscall_handler (struct intr_frame *f) {
   int syscall_nr = *esp; 
   int arg[5];
 
+  printf("%d", thread_current);
   printf("system call number : %d\n", syscall_nr);
   /* System Call switch */
   switch(syscall_nr) {
@@ -64,6 +65,7 @@ syscall_handler (struct intr_frame *f) {
         break;
       case SYS_EXEC :
         get_argument(esp, arg, 1);
+        printf("\nexecexecexec\n");
         f->eax = exec((const char *)arg[0]);
         break;
       case SYS_WAIT :
