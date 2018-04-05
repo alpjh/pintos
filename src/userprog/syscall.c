@@ -11,34 +11,16 @@ static void syscall_handler (struct intr_frame *);
 void check_address(void *addr);
 void get_argument(void *esp, int *arg, int count);
 
-void halt(void);
-void exit(int status);
-bool create(const char *file, unsigned initial_size);
-bool remove(const char *file);
+void halt (void);
+void exit (int status);
+int wait(tid_t tid) {
+tid_t exec (const char *cmd_line);
+bool create (const char *file, unsigned initial_size);
+bool remove (const char *file);
 
 void
 syscall_init (void) {
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
-}
-
-tid_t exec(const char *cmd_line) {
-printf("\nexec call\n");
-    //Process create
-    tid_t pid = process_execute(cmd_line);
-
-    //Find child process
-    struct thread *child = get_child_process(pid);
-
-    //wait for child process tapjae
-    sema_down(&child->load_sema);
-    
-    //if load success, return pid
-    if (child->loaded) 
-        return pid;
-    //if load fail, return -1
-    else
-        return -1;
-
 }
 
 static void
@@ -121,6 +103,30 @@ void exit(int status) {
 	thread_exit(); // 스레드 종료
 }
 
+tid_t exec(const char *cmd_line) {
+printf("\nexec call\n");
+    //Process create
+    tid_t pid = process_execute(cmd_line);
+
+    //Find child process
+    struct thread *child = get_child_process(pid);
+
+    //wait for child process tapjae
+    sema_down(&child->load_sema);
+    
+    //if load success, return pid
+    if (child->loaded) 
+        return pid;
+    //if load fail, return -1
+    else
+        return -1;
+
+}
+
+int wait(tid_t tid) {
+    return process_wait(tid);
+}
+
 bool create(const char *file, unsigned initial_size) {
 	bool success = filesys_create(file, initial_size); // 파일이름과 크기
 	return success; //파일 생성에 성공하면 true 리턴
@@ -131,6 +137,3 @@ bool remove(const char *file) {
 	return success; //파일 제거에 성공하면 true리턴 
 }
 
-int wait(tid_t tid) {
-    return process_wait(tid);
-}
