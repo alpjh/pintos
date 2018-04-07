@@ -13,7 +13,7 @@ void get_argument(void *esp, int *arg, int count);
 
 void halt (void);
 void exit (int status);
-int wait(tid_t tid) {
+int wait(tid_t tid);
 tid_t exec (const char *cmd_line);
 bool create (const char *file, unsigned initial_size);
 bool remove (const char *file);
@@ -47,7 +47,6 @@ syscall_handler (struct intr_frame *f) {
         break;
       case SYS_EXEC :
         get_argument(esp, arg, 1);
-        printf("\nexecexecexec\n");
         f->eax = exec((const char *)arg[0]);
         break;
       case SYS_WAIT :
@@ -104,7 +103,6 @@ void exit(int status) {
 }
 
 tid_t exec(const char *cmd_line) {
-printf("\nexec call\n");
     //Process create
     tid_t pid = process_execute(cmd_line);
 
