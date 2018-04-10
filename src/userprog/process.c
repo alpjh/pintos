@@ -21,6 +21,32 @@
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
 
+//실습내용
+int process_add_file (struct file *f){
+  struct thread *t = thread_current();
+
+  if (!(t->fdt[t->next_fd]))
+    return NULL;
+
+  t->fdt[t->next_fd] = f;
+  ret = t->next_fd;
+///////////////////////////수정필요
+  t->next_fd++;
+/////////////////////////// 
+  return ret;
+}
+
+struct file *process_get_file (int fd){
+  return thread_current()->fdt[fd];
+}  //에러가 없다고 가정했을 시
+
+void process_close_file(int fd){
+  file_close(thread_current()->fdt[fd]);
+  thread_current()->next_fd = fd;
+}
+
+//fdt를 다루는 커널함수들
+
 /* Find child element that equal pid argument */
 struct thread *get_child_process (int pid) {
     //Get current thread to cur
@@ -262,6 +288,14 @@ process_exit (void)
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
+
+//실습 : 유저프로세스가 파일을 닫지 않고 프로세스가 끝내려고 하는 경우 파일을 다 닫아주기 위함
+  int i;
+  for (i = 2; i < MAX_FILE; i++){
+    process_close_file(i); //이 함수 내에서 NULL인지 검사하기 때문에 우리가 구현할 필요는 없다.
+  }
+  free(cur->fdt);
+/////메모리누수 없이 파일디스크립터 테이블 해제
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
