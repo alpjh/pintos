@@ -23,6 +23,56 @@ syscall_init (void) {
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
 
+//실습내용 sudo
+int open(const char *file){
+  struct fild *f = filesys_open(file);
+  int fd;
+  
+  //filesys_open fail
+  if (!f) 
+    return -1;
+
+  fd = process_add_file(f);
+  //process_add_file 실패 경우도 생각해야함
+ 
+  return fd;
+}
+
+int filesize(int fd){
+
+  struct file *f = process_get_file(fd);
+  if (!f)
+    return -1;
+
+  return file_length(f);
+}  //open이 되었다는 가정 하에 진행
+
+int read(int fd, void *buffer, unsigned size){
+  struct file *f = process_get_file(fd); 
+  if (f) {
+    return file_read(f, buffer, size);
+  }  // fd값이 0인 파일은 파일크기가 없음. 키보드로부터 데이터를 읽어오는 동작을 추가해줘야함
+  else if (fd == 0){
+    int i;
+    for (i = 0; i < size; i++){
+      buffer[i] = input_getc();
+    }
+  }
+}
+
+int write(int fd, void *buffer, unsigned size){
+  struct file *f = process_get_file(fd);
+  if (f) {
+    return file_write(f, buffer, size);
+  } 
+  else if (fd == 1){
+    putbuf(buffer, size);
+    return size;
+  }
+}
+
+////////////////////실습
+
 static void
 syscall_handler (struct intr_frame *f) {
 
