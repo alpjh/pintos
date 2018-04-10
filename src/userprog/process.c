@@ -29,7 +29,7 @@ int process_add_file (struct file *f){
     return NULL;
 
   t->fdt[t->next_fd] = f;
-  ret = t->next_fd;
+  int ret = t->next_fd;
 ///////////////////////////수정필요
   t->next_fd++;
 /////////////////////////// 
@@ -37,12 +37,14 @@ int process_add_file (struct file *f){
 }
 
 struct file *process_get_file (int fd){
-  return thread_current()->fdt[fd];
+  struct thread *t = thread_current();
+  return t->fdt[fd];
 }  //에러가 없다고 가정했을 시
 
 void process_close_file(int fd){
-  file_close(thread_current()->fdt[fd]);
-  thread_current()->next_fd = fd;
+  struct thread *t = thread_current();
+  file_close(t->fdt[fd]);
+  t->next_fd = fd;  
 }
 
 //fdt를 다루는 커널함수들
@@ -298,7 +300,10 @@ process_exit (void)
 /////메모리누수 없이 파일디스크립터 테이블 해제
 
 //실습내용
-  file_allow_write(t->executing_file);
+  if (cur->executing_file){
+    file_allow_write(cur->executing_file);
+    file_close(cur->executing_file);
+  }
 //
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */

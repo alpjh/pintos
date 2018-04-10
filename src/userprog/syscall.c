@@ -25,27 +25,32 @@ syscall_init (void) {
 
 //실습내용 sudo
 int open(const char *file){
-
+  lock_acquire(&filesys_lock);
   struct fild *f = filesys_open(file);
+
   int fd;
   
   //filesys_open fail
-  if (!f) 
+  if (!f) {
+    lock_release(&filesys_lock);
     return -1;
-
+  }
   fd = process_add_file(f);
   //process_add_file 실패 경우도 생각해야함
- 
+  lock_release(&filesys_lock);
   return fd;
 }
 
 int filesize(int fd){
-
+  lock_acquire(&filesys_lock);
   struct file *f = process_get_file(fd);
-  if (!f)
+  if (!f){
+    lock_release(&filesys_lock);
     return -1;
-
-  return file_length(f);
+  }
+  int size = file_length(f);
+  lock_release(&filesys_lock);
+  return size;
 }  //open이 되었다는 가정 하에 진행
 
 int read(int fd, void *buffer, unsigned size){
@@ -97,18 +102,35 @@ int write(int fd, void *buffer, unsigned size){
 ////////////////////실습
 
 void seek (int fd, unsigned position){
+  lock_acquire(&filesys_lock);
   struct file *f = process_get_file(fd);
+  
+  if(!f){
+    lock_release(&filesys_lock);
+    return;
+  }
+
   file_seek(f, position); //열린 파일의 위치를 position만큼 이동
+  lock_release(&filesys_lock);
 }
 
 unsigned tell (int fd){
+  lock_acquire(&filesys_lock);
   struct file *f = process_get_file(fd);
+  if(!f){
+    lock_release(&filesys_lock);
+    return -1;
+  }
+ 
   off_t offset = file_tell(f);
+  lock_release(&filesys_lock);
   return offset; //열린 파일의 위치 리턴
 }
 
 void close (int fd){
+  lock_acquire(&filesys_lock);
   process_close_file(fd); //파일 닫음
+  lock_release(&filesys_lock);
 }
 
 static void
