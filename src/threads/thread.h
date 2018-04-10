@@ -119,6 +119,11 @@ struct thread
     //exit status
     int exit_status;
 
+  //실습내용
+  struct file **fdt;
+  int next_fd;
+  //
+
   };
 
 /* If false (default), use round-robin scheduler.
