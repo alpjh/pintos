@@ -297,6 +297,9 @@ process_exit (void)
   free(cur->fdt);
 /////메모리누수 없이 파일디스크립터 테이블 해제
 
+//실습내용
+  file_allow_write(t->executing_file);
+//
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;
@@ -427,6 +430,10 @@ load (const char *file_name, void (**eip) (void), void **esp)
       printf ("load: %s: open failed\n", file_name);
       goto done; 
     }
+//실습내용
+  file_deny_write(file);
+  t->executing_file = file;
+//
 
   /* Read and verify executable header. */
   if (file_read (file, &ehdr, sizeof ehdr) != sizeof ehdr
