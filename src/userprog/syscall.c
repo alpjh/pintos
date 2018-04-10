@@ -25,6 +25,7 @@ syscall_init (void) {
 
 //실습내용 sudo
 int open(const char *file){
+
   struct fild *f = filesys_open(file);
   int fd;
   
@@ -48,30 +49,67 @@ int filesize(int fd){
 }  //open이 되었다는 가정 하에 진행
 
 int read(int fd, void *buffer, unsigned size){
+
   struct file *f = process_get_file(fd); 
-  if (f) {
-    return file_read(f, buffer, size);
-  }  // fd값이 0인 파일은 파일크기가 없음. 키보드로부터 데이터를 읽어오는 동작을 추가해줘야함
-  else if (fd == 0){
-    int i;
+  
+  if (fd == 0){
+    unsigned i;
+    unit8_t* localbuf = (unit8_t*) buffer;
     for (i = 0; i < size; i++){
-      buffer[i] = input_getc();
+      localbuf[i] = input_getc();
     }
+    return size;
+  } // fd값이 0인 파일은 파일크기가 없음. 키보드로부터 데이터를 읽어오는 >동작을 추가해줘야함
+  
+  lock_acquire(&filesys_lock);
+  if (!f) {
+    lock_release(&filesys_lock);
+    return -1;
   }
+
+  int bytesize = file_read(f, buffer, size);
+  
+  lock_release(&filesys_lock);
+  return bytesize;
 }
 
 int write(int fd, void *buffer, unsigned size){
-  struct file *f = process_get_file(fd);
-  if (f) {
-    return file_write(f, buffer, size);
-  } 
-  else if (fd == 1){
-    putbuf(buffer, size);
+
+  if (fd == 1) {
+    putbuf(buffer,size); //파일디스크립터가 1일 경우 버퍼에 저장된 갑승ㄹ 화면에 출력하고 버퍼의 크기를 리턴
     return size;
   }
+
+  lock_acquire(&filesys_lock);
+  struct file *f = process_get_file(fd);
+
+  if (!f){
+    lock_release(&filesys_lock);
+    return -1;
+  }
+
+  int bytesize = file_write(f, buffer, size);
+
+  lock_release(&filesys_lock);
+  return bytesize;
 }
 
 ////////////////////실습
+
+void seek (int fd, unsigned position){
+  struct file *f = process_get_file(fd);
+  file_seek(f, position); //열린 파일의 위치를 position만큼 이동
+}
+
+unsigned tell (int fd){
+  struct file *f = process_get_file(fd);
+  off_t offset = file_tell(f);
+  return offset; //열린 파일의 위치 리턴
+}
+
+void close (int fd){
+  process_close_file(fd); //파일 닫음
+}
 
 static void
 syscall_handler (struct intr_frame *f) {
