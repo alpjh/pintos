@@ -122,9 +122,8 @@ struct thread
   //실습내용
   struct file **fdt;
   int next_fd;
-  //
-
-  };
+  
+};
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.

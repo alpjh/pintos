@@ -208,8 +208,8 @@ thread_create (const char *name, int priority,
 
   //실습 내용
 #define MAX_FILE	10
-  t->fdt = malloc(sizeof(struct file*)*MAX_FILE);
   t->next_fd = 2;
+  t->fdt = malloc(sizeof(struct file*)*MAX_FILE);
   //
 
   /* 부모 프로세스 저장 */
