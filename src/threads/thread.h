@@ -122,6 +122,7 @@ struct thread
   //실습내용
   struct file **fdt;
   int next_fd;
+  struct file *executing_file;
   
 };
 

@@ -59,7 +59,7 @@ int read(int fd, void *buffer, unsigned size){
   
   if (fd == 0){
     unsigned i;
-    unit8_t* localbuf = (unit8_t*) buffer;
+    uint8_t* localbuf = (uint8_t*) buffer;
     for (i = 0; i < size; i++){
       localbuf[i] = input_getc();
     }
