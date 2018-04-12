@@ -24,6 +24,7 @@ static void page_fault (struct intr_frame *);
    way as other exceptions, but this will need to change to
    implement virtual memory.
 
+#include "threads/thread.c"
    Refer to [IA32-v3a] section 5.15 "Exception and Interrupt
    Reference" for a description of each of these exceptions. */
 void
@@ -127,6 +128,7 @@ page_fault (struct intr_frame *f)
   bool user;         /* True: access by user, false: access by kernel. */
   void *fault_addr;  /* Fault address. */
 
+  exit(-1);
   /* Obtain faulting address, the virtual address that was
      accessed to cause the fault.  It may point to code or to
      data.  It is not necessarily the address of the instruction

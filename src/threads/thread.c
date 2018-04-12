@@ -20,6 +20,8 @@
    of thread.h for details. */
 #define THREAD_MAGIC 0xcd6abf4b
 
+#define MAX_FILE 64
+
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
 static struct list ready_list;
@@ -206,12 +208,6 @@ thread_create (const char *name, int priority,
 
   intr_set_level (old_level);
 
-  //실습 내용
-#define MAX_FILE	10
-  t->next_fd = 2;
-  t->fdt = malloc(sizeof(struct file*)*MAX_FILE);
-  //
-
   /* 부모 프로세스 저장 */
   t->parent = thread_current();
   /* 프로그램이 로드되지 않음 */
@@ -224,8 +220,15 @@ thread_create (const char *name, int priority,
   sema_init(&t->load_sema , 0);
   /* 자식 리스트에 추가 */
   list_push_back(&thread_current()->child_list, &t->child_elem);
-  /* Add to run queue. */
-  thread_unblock (t);
+ 
+  //실습 내용
+  t->fdt = palloc_get_page(0);
+  t->next_fd = 2;
+//  t->fdt = malloc(sizeof(struct file*)*MAX_FILE);
+
+
+ /* Add to run queue. */
+ thread_unblock (t);
 
   return tid;
 }

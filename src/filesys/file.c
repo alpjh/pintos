@@ -45,6 +45,7 @@ file_reopen (struct file *file)
 void
 file_close (struct file *file) 
 {
+  printf("\n\n%d : file - file_close\n\n", file);
   if (file != NULL)
     {
       file_allow_write (file);
@@ -119,6 +120,7 @@ void
 file_deny_write (struct file *file) 
 {
   ASSERT (file != NULL);
+  printf("\nfile_deny\n");
   if (!file->deny_write) 
     {
       file->deny_write = true;

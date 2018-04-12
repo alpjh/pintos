@@ -5,12 +5,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <list.h>
 #include "userprog/gdt.h"
 #include "userprog/pagedir.h"
 #include "userprog/tss.h"
+#include "userprog/syscall.h"
 #include "filesys/directory.h"
 #include "filesys/file.h"
 #include "filesys/filesys.h"
+#include "filesys/inode.h"
 #include "threads/flags.h"
 #include "threads/init.h"
 #include "threads/interrupt.h"
@@ -26,27 +29,32 @@ static bool load (const char *cmdline, void (**eip) (void), void **esp);
 //실습내용
 int process_add_file (struct file *f){
   struct thread *t = thread_current();
-
+  
   if (!(t->fdt[t->next_fd]))
     return NULL;
 
   t->fdt[t->next_fd] = f;
-  int ret = t->next_fd;
-///////////////////////////수정필요
   t->next_fd++;
 /////////////////////////// 
-  return ret;
+  return t->next_fd - 1;
 }
 
 struct file *process_get_file (int fd){
   struct thread *t = thread_current();
-  return t->fdt[fd];
-}  //에러가 없다고 가정했을 시
+
+  if(t->fdt[fd] != NULL)
+    return t->fdt[fd];
+  return NULL;
+} 
 
 void process_close_file(int fd){
-  struct thread *t = thread_current();
-  file_close(t->fdt[fd]);
-  t->next_fd = fd;  
+
+  printf("\n\nprocess_close_file\n\n");
+    struct thread *t = thread_current();
+  if(t->fdt[fd] != NULL)
+      file_close(t->fdt[fd]);
+  t->fdt[fd] = NULL;
+//  t->next_fd = fd;
 }
 
 //fdt를 다루는 커널함수들
@@ -292,20 +300,26 @@ process_exit (void)
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
-
 //실습 : 유저프로세스가 파일을 닫지 않고 프로세스가 끝내려고 하는 경우 파일을 다 닫아주기 위함
-  int i;
-  for (i = 2; i < MAX_FILE; i++){
-    process_close_file(i); //이 함수 내에서 NULL인지 검사하기 때문에 우리가 구현할 필요는 없다.
+  printf("\nbefore loop\n");
+//  int i;
+//  for (i = 2; i < MAX_FILE; i++){
+//    process_close_file(i); //이 함수 내에서 NULL인지 검사하기 때문에 우리가 구현할 필요는 없다.
+//  }
+  while(cur->next_fd>2) {
+      cur->next_fd--;
+      process_close_file(cur->next_fd);
   }
-  free(cur->fdt);
-/////메모리누수 없이 파일디스크립터 테이블 해제
-
+  printf("\nafter loop\n");
 //실습내용
-  if (cur->executing_file){
-    file_allow_write(cur->executing_file);
+printf("\nbefore exe close\n");
+  if (cur->executing_file != NULL){
     file_close(cur->executing_file);
   }
+
+  palloc_free_page(cur->fdt);
+/////메모리누수 없이 파일디스크립터 테이블 해제
+
 //
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
@@ -430,17 +444,21 @@ load (const char *file_name, void (**eip) (void), void **esp)
     goto done;
   process_activate ();
 
+  lock_acquire(&filesys_lock);
   /* Open executable file. */
   file = filesys_open (file_name);
   if (file == NULL) 
     {
+      lock_release(&filesys_lock);
       printf ("load: %s: open failed\n", file_name);
       goto done; 
     }
-//실습내용
-  file_deny_write(file);
+//실습
+  printf("\nprocess_deny\n");
   t->executing_file = file;
-//
+  file_deny_write(file);
+  lock_release(&filesys_lock);
+
 
   /* Read and verify executable header. */
   if (file_read (file, &ehdr, sizeof ehdr) != sizeof ehdr
@@ -525,7 +543,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
  done:
   /* We arrive here whether the load is successful or not. */
-  file_close (file);
+ // file_close (file);
   return success;
 }
 

@@ -21,6 +21,7 @@ bool remove (const char *file);
 void
 syscall_init (void) {
     intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
+    lock_init(&filesys_lock);
 }
 
 //실습내용 sudo
@@ -102,28 +103,22 @@ int write(int fd, void *buffer, unsigned size){
 ////////////////////실습
 
 void seek (int fd, unsigned position){
-    lock_acquire(&filesys_lock);
     struct file *f = process_get_file(fd);
 
     if(!f){
-        lock_release(&filesys_lock);
         return;
     }
 
     file_seek(f, position); //열린 파일의 위치를 position만큼 이동
-    lock_release(&filesys_lock);
 }
 
 unsigned tell (int fd){
-    lock_acquire(&filesys_lock);
     struct file *f = process_get_file(fd);
     if(!f){
-        lock_release(&filesys_lock);
         return -1;
     }
 
     off_t offset = file_tell(f);
-    lock_release(&filesys_lock);
     return offset; //열린 파일의 위치 리턴
 }
 
@@ -201,9 +196,9 @@ syscall_handler (struct intr_frame *f) {
             get_argument(esp , arg , 1);
             close(arg[0]);  
             break;
-            /*default :
+        default :
               printf("Not system call! \n");
-              thread_exit();*/
+              thread_exit();
     }  
 }
 
