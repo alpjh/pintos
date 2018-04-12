@@ -49,7 +49,7 @@ struct file *process_get_file (int fd){
 
 void process_close_file(int fd){
 
-  printf("\n\nprocess_close_file\n\n");
+ // printf("\n\nprocess_close_file\n\n");
     struct thread *t = thread_current();
   if(t->fdt[fd] != NULL)
       file_close(t->fdt[fd]);
@@ -242,7 +242,7 @@ start_process (void *file_name_)
       argument_stack(parse, count, &if_.esp);
       
       // Debug for argument argument
-      hex_dump(if_.esp, if_.esp, PHYS_BASE - if_.esp, true);   
+      //hex_dump(if_.esp, if_.esp, PHYS_BASE - if_.esp, true);   
       // hex_dump는 메모리를 16진수 형태로 화면에 출력한다.   
       
   }
@@ -301,22 +301,22 @@ process_exit (void)
   struct thread *cur = thread_current ();
   uint32_t *pd;
 //실습 : 유저프로세스가 파일을 닫지 않고 프로세스가 끝내려고 하는 경우 파일을 다 닫아주기 위함
-  printf("\nbefore loop\n");
+//  printf("\nbefore loop\n");
 //  int i;
 //  for (i = 2; i < MAX_FILE; i++){
 //    process_close_file(i); //이 함수 내에서 NULL인지 검사하기 때문에 우리가 구현할 필요는 없다.
 //  }
-  while(cur->next_fd>2) {
-      cur->next_fd--;
-      process_close_file(cur->next_fd);
-  }
-  printf("\nafter loop\n");
-//실습내용
-printf("\nbefore exe close\n");
-  if (cur->executing_file != NULL){
+   if (cur->executing_file != NULL){
     file_close(cur->executing_file);
   }
 
+ while(cur->next_fd>2) {
+      cur->next_fd--;
+      process_close_file(cur->next_fd);
+  }
+//  printf("\nafter loop\n");
+//실습내용
+//printf("\nbefore exe close\n");
   palloc_free_page(cur->fdt);
 /////메모리누수 없이 파일디스크립터 테이블 해제
 
@@ -454,7 +454,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
       goto done; 
     }
 //실습
-  printf("\nprocess_deny\n");
+//  printf("\nprocess_deny\n");
   t->executing_file = file;
   file_deny_write(file);
   lock_release(&filesys_lock);

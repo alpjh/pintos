@@ -133,9 +133,10 @@ syscall_handler (struct intr_frame *f) {
     check_address((void *)esp); // 주소값이 유효한지 확인
     int syscall_nr = *esp; 
     int arg[5];
-
+/*
     printf("%d", thread_current);
     printf("system call number : %d\n", syscall_nr);
+    */
     /* System Call switch */
     switch(syscall_nr) {
         //HALT
@@ -197,7 +198,7 @@ syscall_handler (struct intr_frame *f) {
             close(arg[0]);  
             break;
         default :
-              printf("Not system call! \n");
+             // printf("Not system call! \n");
               thread_exit();
     }  
 }
