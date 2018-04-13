@@ -249,12 +249,14 @@ tid_t exec(const char *cmd_line) {
     //Find child process
     struct thread *child = get_child_process(tid);
 
+    if(!child)
+        return -1;
     //wait for child process tapjae
     sema_down(&child->load_sema);
-
     //if load success, return pid
     if (child->loaded) 
         return tid;
+    
     //if load fail, return -1
     else
         return -1;

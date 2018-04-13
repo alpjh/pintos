@@ -213,7 +213,7 @@ thread_create (const char *name, int priority,
   /* 프로그램이 로드되지 않음 */
   t->loaded = false;
   /* 프로세스가 종료되지 않음 */ 
-  t->exited = false;
+  t->exited = false; 
   /* exit 세마포어 0으로 초기화 */ 
   sema_init(&t->exit_sema , 0);
   /* load 세마포어 0으로 초기화 */

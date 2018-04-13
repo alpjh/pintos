@@ -185,7 +185,6 @@ process_execute (const char *file_name)
 
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (parsed_name, PRI_DEFAULT, start_process, fn_copy);
-
   /* Free the allocated memory */
   palloc_free_page (parsed_name);
 
@@ -285,11 +284,11 @@ process_wait (tid_t child_tid UNUSED)
    if(!child->exited)
       sema_down(&child -> exit_sema);
   
+  int status = child->exit_status;
   /* 자식 프로세스 디스크립터 삭제 */
   remove_child_process(child);  
-  
   /* 자식 프로세스의 exit status 리턴 */
-  return child->exit_status;
+  return status;
  
 }
 
