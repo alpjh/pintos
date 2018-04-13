@@ -26,17 +26,16 @@
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
 
-//실습내용
+//Add file to file discripter
 int process_add_file (struct file *f){
-  struct thread *t = thread_current();
   
-  if (!(t->fdt[t->next_fd]))
-    return NULL;
-
-  t->fdt[t->next_fd] = f;
-  t->next_fd++;
-/////////////////////////// 
-  return t->next_fd - 1;
+    struct thread *t = thread_current();
+  
+    t->fdt[t->next_fd] = f;
+  
+    t->next_fd++;
+  
+    return t->next_fd - 1;
 }
 
 struct file *process_get_file (int fd){
@@ -302,10 +301,11 @@ process_exit (void)
   uint32_t *pd;
 //실습 : 유저프로세스가 파일을 닫지 않고 프로세스가 끝내려고 하는 경우 파일을 다 닫아주기 위함
 //  printf("\nbefore loop\n");
-//  int i;
-//  for (i = 2; i < MAX_FILE; i++){
-//    process_close_file(i); //이 함수 내에서 NULL인지 검사하기 때문에 우리가 구현할 필요는 없다.
-//  }
+/*  int i;
+  for (i = 2; i < MAX_FILE; i++){
+    process_close_file(i); //이 함수 내에서 NULL인지 검사하기 때문에 우리가 구현할 필요는 없다.
+  }
+  */
    if (cur->executing_file != NULL){
     file_close(cur->executing_file);
   }
@@ -314,6 +314,8 @@ process_exit (void)
       cur->next_fd--;
       process_close_file(cur->next_fd);
   }
+  
+// free(cur->fdt);
 //  printf("\nafter loop\n");
 //실습내용
 //printf("\nbefore exe close\n");

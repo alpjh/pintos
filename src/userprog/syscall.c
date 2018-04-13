@@ -26,19 +26,16 @@ syscall_init (void) {
 
 //실습내용 sudo
 int open(const char *file){
-    lock_acquire(&filesys_lock);
     struct fild *f = filesys_open(file);
 
     int fd;
 
     //filesys_open fail
-    if (!f) {
-        lock_release(&filesys_lock);
+    if (!f)
         return -1;
-    }
+    
     fd = process_add_file(f);
     //process_add_file 실패 경우도 생각해야함
-    lock_release(&filesys_lock);
     return fd;
 }
 
@@ -56,7 +53,8 @@ int filesize(int fd){
 
 int read(int fd, void *buffer, unsigned size){
 
-    struct file *f = process_get_file(fd); 
+    if (fd == 1)
+        return -1;
 
     if (fd == 0){
         unsigned i;
@@ -67,7 +65,9 @@ int read(int fd, void *buffer, unsigned size){
         return size;
     } // fd값이 0인 파일은 파일크기가 없음. 키보드로부터 데이터를 읽어오는 >동작을 추가해줘야함
 
+
     lock_acquire(&filesys_lock);
+    struct file *f = process_get_file(fd); 
     if (!f) {
         lock_release(&filesys_lock);
         return -1;
@@ -132,7 +132,7 @@ syscall_handler (struct intr_frame *f) {
     uint32_t *esp = f->esp;// Get user stack pointer
     check_address((void *)esp); // 주소값이 유효한지 확인
     int syscall_nr = *esp; 
-    int arg[5];
+    int arg[10];
 /*
     printf("%d", thread_current);
     printf("system call number : %d\n", syscall_nr);
@@ -151,6 +151,7 @@ syscall_handler (struct intr_frame *f) {
             break;
         case SYS_EXEC :
             get_argument(esp, arg, 1);
+            check_address((void *) arg[0]);
             f->eax = exec((const char *)arg[0]);
             break;
         case SYS_WAIT :
@@ -160,15 +161,18 @@ syscall_handler (struct intr_frame *f) {
             //CREATE
         case SYS_CREATE :
             get_argument(esp, arg, 2);
+            check_address(arg[0]);
             f->eax = create((const char *)arg[0], (const char *)arg[1]);
             break;
             //REMOVE
         case SYS_REMOVE :
             get_argument(esp, arg, 1);
+            check_address(arg[0]);
             f->eax = remove((const char *)arg[0]);
             break;
         case SYS_OPEN :
             get_argument(esp, arg, 1);
+            check_address(arg[0]);                
             f->eax = open((const char *)arg[0]);
             break;
         case SYS_FILESIZE :
@@ -177,10 +181,12 @@ syscall_handler (struct intr_frame *f) {
             break;
         case SYS_READ :
             get_argument(esp, arg , 3);
+            check_address(arg[1]);
             f -> eax = read(arg[0] , (void *)arg[1] , (unsigned)arg[2]);
             break;
         case SYS_WRITE :
             get_argument(esp, arg , 3);
+            check_address(arg[1]);
             f -> eax = write(arg[0] , (const void *)arg[1] , (unsigned)arg[2]);
             break;
         case SYS_SEEK :
@@ -238,17 +244,17 @@ void exit(int status) {
 
 tid_t exec(const char *cmd_line) {
     //Process create
-    tid_t pid = process_execute(cmd_line);
+    tid_t tid = process_execute(cmd_line);
 
     //Find child process
-    struct thread *child = get_child_process(pid);
+    struct thread *child = get_child_process(tid);
 
     //wait for child process tapjae
     sema_down(&child->load_sema);
 
     //if load success, return pid
     if (child->loaded) 
-        return pid;
+        return tid;
     //if load fail, return -1
     else
         return -1;
