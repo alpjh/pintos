@@ -224,9 +224,16 @@ thread_create (const char *name, int priority,
   //실습 내용
   t->fdt = palloc_get_page(0);
   t->next_fd = 2;
+//  t->fdt -= t->next_fd;
 //  t->fdt = malloc(sizeof(struct file*)*MAX_FILE);
 
-
+/*  t->fdt = palloc_get_multiple (PAL_ZERO, 2);
+  if (t->fdt == NULL) {
+      palloc_free_page(t);
+      return TID_ERROR;
+  }
+  t->next_fd = 2;
+  t->fdt -= t->next_fd;*/
  /* Add to run queue. */
  thread_unblock (t);
 

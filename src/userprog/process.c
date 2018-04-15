@@ -28,19 +28,34 @@ static bool load (const char *cmdline, void (**eip) (void), void **esp);
 
 //Add file to file discripter
 int process_add_file (struct file *f){
-  
+ 
+    if (f == NULL)
+        return -1;
+
     struct thread *t = thread_current();
   
     t->fdt[t->next_fd] = f;
   
     t->next_fd++;
-  
+ 
     return t->next_fd - 1;
+
+/*    struct thread *t;
+    int fd;
+    if (f == NULL )
+        return -1;
+    t = thread_current ();
+    fd = t->next_fd++;
+    t->fdt[fd] = f;
+    return fd;*/
 }
 
 struct file *process_get_file (int fd){
   struct thread *t = thread_current();
 
+/*  if (fd <= 1 || t->next_fd <= fd)
+      return NULL;
+  return t->fdt[fd];*/
   if(t->fdt[fd] != NULL)
     return t->fdt[fd];
   return NULL;
@@ -54,6 +69,11 @@ void process_close_file(int fd){
       file_close(t->fdt[fd]);
   t->fdt[fd] = NULL;
 //  t->next_fd = fd;
+
+/*    if (fd <=1 || t->next_fd <=fd)
+        return;
+    file_close (t->fdt[fd]);
+    t->fdt[fd] = NULL;*/
 }
 
 //fdt를 다루는 커널함수들
@@ -154,6 +174,7 @@ void argument_stack(char **parse, int count, void **esp) {
     **(long**)esp = 0;
 
     free(argv_ptrs);
+
 }
 
 /* Starts a new thread running a user program loaded from
@@ -231,6 +252,12 @@ start_process (void *file_name_)
   /* If load failed, quit. */
   if (!success) {
       thread_current() -> loaded = false;    
+      //free need?
+      palloc_free_page (file_name);
+      for(i=0; i<count; i++) 
+          palloc_free_page(parse[i]);
+      palloc_free_page (parse);
+     
       thread_exit ();
   }
   else {
@@ -279,6 +306,9 @@ process_wait (tid_t child_tid UNUSED)
   /* 예외 처리 발생시 -1 리턴 */ 
   if(!child)
       return -1;
+    /*struct thread *child;
+    if(!(child = process_get_child(child_tid)))
+        return -1;*/
 
   /* 자식프로세스가 종료될 때까지 부모 프로세스 대기(세마포어 이용) */
    if(!child->exited)
@@ -300,19 +330,15 @@ process_exit (void)
   uint32_t *pd;
 //실습 : 유저프로세스가 파일을 닫지 않고 프로세스가 끝내려고 하는 경우 파일을 다 닫아주기 위함
 //  printf("\nbefore loop\n");
-/*  int i;
-  for (i = 2; i < MAX_FILE; i++){
-    process_close_file(i); //이 함수 내에서 NULL인지 검사하기 때문에 우리가 구현할 필요는 없다.
-  }
-  */
-   if (cur->executing_file != NULL){
-    file_close(cur->executing_file);
-  }
-
- while(cur->next_fd>2) {
+ 
+   while(cur->next_fd>2) {
       cur->next_fd--;
       process_close_file(cur->next_fd);
   }
+/*   int i;
+  for (i = 2; i < 60; i++){
+    process_close_file(i); //이 함수 내에서 NULL인지 검사하기 때문에 우리가 구현할 필요는 없다.
+  }i*/
   
 // free(cur->fdt);
 //  printf("\nafter loop\n");
@@ -320,6 +346,10 @@ process_exit (void)
 //printf("\nbefore exe close\n");
   palloc_free_page(cur->fdt);
 /////메모리누수 없이 파일디스크립터 테이블 해제
+ if (cur->executing_file != NULL){
+    file_close(cur->executing_file);
+  }
+
 
 //
   /* Destroy the current process's page directory and switch back
@@ -355,7 +385,7 @@ process_activate (void)
      interrupts. */
   tss_update ();
 }
-
+
 /* We load ELF binaries.  The following definitions are taken
    from the ELF specification, [ELF1], more-or-less verbatim.  */
 
