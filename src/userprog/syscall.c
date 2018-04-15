@@ -108,12 +108,14 @@ int read(int fd, void *buffer, unsigned size){
 
 int write(int fd, void *buffer, unsigned size){
 
+    lock_acquire(&filesys_lock);
     if (fd == 1) {
         putbuf(buffer,size); //파일디스크립터가 1일 경우 버퍼에 저장된 갑승ㄹ 화면에 출력하고 버퍼의 크기를 리턴
+        lock_release(&filesys_lock);
         return size;
     }
 
-    lock_acquire(&filesys_lock);
+    //lock_acquire(&filesys_lock);
     struct file *f = process_get_file(fd);
 
     if (!f){
