@@ -17,144 +17,18 @@ int wait(tid_t tid);
 tid_t exec (const char *cmd_line);
 bool create (const char *file, unsigned initial_size);
 bool remove (const char *file);
-
+int open (const char *file);
+int filesize (int fd);
+int read (int fd, void *buffer, unsigned size);
+void seek (int fd, unsigned position);
+unsigned tell (int fd);
+void close (int fd);
 
 void
 syscall_init (void) {
     intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
     lock_init(&filesys_lock);
 }
-
-//실습내용 sudo
-int open(const char *file){
-//    struct fild *f = filesys_open(file);
-
-    int fd = -1;
-    lock_acquire(&filesys_lock);
-    //filesys_open fail
-    //if (!f)
-    //    return -1;
-    
-    fd = process_add_file(filesys_open(file));
-    //process_add_file 실패 경우도 생각해야함
-
-    lock_release(&filesys_lock);
-    return fd;
-}
-
-int filesize(int fd){
-    struct file *f = process_get_file(fd);
-    if (!f){
-        return -1;
-    }
-    return file_length(f);
-}  //open이 되었다는 가정 하에 진행
-
-int read(int fd, void *buffer, unsigned size){
-
-    struct file *f;
-
-    lock_acquire (&filesys_lock);
-    /*if (fd == 1)
-        return -1;*/
-
-    if (fd == 0){
-       /* unsigned i;
-        uint8_t* localbuf = (uint8_t*) buffer;
-        for (i = 0; i < size; i++){
-            localbuf[i] = input_getc();
-        }*/
-        unsigned count = size;
-        while (count--)
-            *((char *)buffer++) = input_getc();
-        lock_release(&filesys_lock);
-        return size;
-    } // fd값이 0인 파일은 파일크기가 없음. 키보드로부터 데이터를 읽어오는 >동작을 추가해줘야함
-
-    if((f = process_get_file(fd)) == NULL) {
-        lock_release(&filesys_lock);
-        return -1;
-    }
-
-    size = file_read(f, buffer, size);
-
-    lock_release(&filesys_lock);
-    return size;
-/*    struct file *f;
-    pin_string (buffer, buffer + size, true);
-    lock_acquire (&filesys_lock);
-
-    if (fd == STDIN_FILENO)
-    {
-        // 표준 입력
-        unsigned count = size;
-        while (count--)
-            *((char *)buffer++) = input_getc();
-        lock_release (&filesys_lock);
-        unpin_string (buffer, buffer + size);
-        return size;
-    }
-    if ((f = process_get_file (fd)) == NULL)
-    {
-        lock_release (&filesys_lock);
-        unpin_string (buffer, buffer + size);
-        return -1;
-    }
-    size = file_read (f, buffer, size);
-    lock_release (&filesys_lock);
-    unpin_string (buffer, buffer + size);
-    return size;*/
-}
-
-int write(int fd, void *buffer, unsigned size){
-
-    lock_acquire(&filesys_lock);
-    if (fd == 1) {
-        putbuf(buffer,size); //파일디스크립터가 1일 경우 버퍼에 저장된 갑승ㄹ 화면에 출력하고 버퍼의 크기를 리턴
-        lock_release(&filesys_lock);
-        return size;
-    }
-
-    //lock_acquire(&filesys_lock);
-    struct file *f = process_get_file(fd);
-
-    if (!f){
-        lock_release(&filesys_lock);
-        return -1;
-    }
-
-    int bytesize = file_write(f, buffer, size);
-
-    lock_release(&filesys_lock);
-    return bytesize;
-}
-
-////////////////////실습
-
-void seek (int fd, unsigned position){
-    struct file *f = process_get_file(fd);
-
-    if(!f){
-        return;
-    }
-
-    file_seek(f, position); //열린 파일의 위치를 position만큼 이동
-}
-
-unsigned tell (int fd){
-    struct file *f = process_get_file(fd);
-    if(!f){
-        return -1;
-    }
-
-    off_t offset = file_tell(f);
-    return offset; //열린 파일의 위치 리턴
-}
-
-void close (int fd){
-    process_close_file(fd); //파일 닫음
-}
-
 static void
 syscall_handler (struct intr_frame *f) {
 
@@ -307,4 +181,135 @@ bool remove(const char *file) {
     bool success = filesys_remove(file); // 파일 이름에 해당하는 파일 제거
     return success; //파일 제거에 성공하면 true리턴 
 }
+
+//실습내용 sudo
+int open(const char *file){
+//    struct fild *f = filesys_open(file);
+
+    int fd = -1;
+    lock_acquire(&filesys_lock);
+    //filesys_open fail
+    //if (!f)
+    //    return -1;
+    
+    fd = process_add_file(filesys_open(file));
+    //process_add_file 실패 경우도 생각해야함
+
+    lock_release(&filesys_lock);
+    return fd;
+}
+
+int filesize(int fd){
+    struct file *f = process_get_file(fd);
+    if (!f){
+        return -1;
+    }
+    return file_length(f);
+}  //open이 되었다는 가정 하에 진행
+
+int read(int fd, void *buffer, unsigned size){
+
+    struct file *f;
+
+    lock_acquire (&filesys_lock);
+    /*if (fd == 1)
+        return -1;*/
+
+    if (fd == 0){
+       /* unsigned i;
+        uint8_t* localbuf = (uint8_t*) buffer;
+        for (i = 0; i < size; i++){
+            localbuf[i] = input_getc();
+        }*/
+        unsigned count = size;
+        while (count--)
+            *((char *)buffer++) = input_getc();
+        lock_release(&filesys_lock);
+        return size;
+    } // fd값이 0인 파일은 파일크기가 없음. 키보드로부터 데이터를 읽어오는 >동작을 추가해줘야함
+
+    if((f = process_get_file(fd)) == NULL) {
+        lock_release(&filesys_lock);
+        return -1;
+    }
+
+    size = file_read(f, buffer, size);
+
+    lock_release(&filesys_lock);
+    return size;
+/*    struct file *f;
+    pin_string (buffer, buffer + size, true);
+    lock_acquire (&filesys_lock);
+
+    if (fd == STDIN_FILENO)
+    {
+        // 표준 입력
+        unsigned count = size;
+        while (count--)
+            *((char *)buffer++) = input_getc();
+        lock_release (&filesys_lock);
+        unpin_string (buffer, buffer + size);
+        return size;
+    }
+    if ((f = process_get_file (fd)) == NULL)
+    {
+        lock_release (&filesys_lock);
+        unpin_string (buffer, buffer + size);
+        return -1;
+    }
+    size = file_read (f, buffer, size);
+    lock_release (&filesys_lock);
+    unpin_string (buffer, buffer + size);
+    return size;*/
+}
+
+int write(int fd, void *buffer, unsigned size){
+
+    lock_acquire(&filesys_lock);
+    if (fd == 1) {
+        putbuf(buffer,size); //파일디스크립터가 1일 경우 버퍼에 저장된 갑승ㄹ 화면에 출력하고 버퍼의 크기를 리턴
+        lock_release(&filesys_lock);
+        return size;
+    }
+
+    //lock_acquire(&filesys_lock);
+    struct file *f = process_get_file(fd);
+
+    if (!f){
+        lock_release(&filesys_lock);
+        return -1;
+    }
+
+    int bytesize = file_write(f, buffer, size);
+
+    lock_release(&filesys_lock);
+    return bytesize;
+}
+
+////////////////////실습
+
+void seek (int fd, unsigned position) {
+    struct file *f = process_get_file(fd);
+
+    if(!f){
+        return;
+    }
+
+    file_seek(f, position); //열린 파일의 위치를 position만큼 이동
+}
+
+unsigned tell (int fd) {
+    struct file *f = process_get_file(fd);
+    if(!f){
+        return -1;
+    }
+
+    off_t offset = file_tell(f);
+    return offset; //열린 파일의 위치 리턴
+}
+
+void close (int fd) {
+    process_close_file(fd); //파일 닫음
+}
+
 
