@@ -36,75 +36,80 @@ syscall_handler (struct intr_frame *f) {
     check_address((void *)esp); // 주소값이 유효한지 확인
     int syscall_nr = *esp; 
     int arg[3];
-/*
-    printf("%d", thread_current);
-    printf("system call number : %d\n", syscall_nr);
-    */
+    
     /* System Call switch */
     switch(syscall_nr) {
         //HALT
         case SYS_HALT:
             halt();
             break;
-            //EXIT
+        //EXIT
         case SYS_EXIT :
             get_argument(esp, arg, 1);
             exit(arg[0]);
             break;
+        //EXEC
         case SYS_EXEC :
             get_argument(esp, arg, 1);
             check_address((void *) arg[0]);
             f->eax = exec((const char *)arg[0]);
             break;
+        //WAIT
         case SYS_WAIT :
             get_argument(esp, arg, 1);
             f->eax = wait(arg[0]);
             break;
-            //CREATE
+        //CREATE
         case SYS_CREATE :
             get_argument(esp, arg, 2);
-            check_address(arg[0]);
-            f->eax = create((const char *)arg[0], (const char *)arg[1]);
+            check_address((void *)arg[0]);
+            f->eax = create((const char *)arg[0], arg[1]);
             break;
-            //REMOVE
+        //REMOVE
         case SYS_REMOVE :
             get_argument(esp, arg, 1);
-            check_address(arg[0]);
+            check_address((void *)arg[0]);
             f->eax = remove((const char *)arg[0]);
             break;
+        //OPEN
         case SYS_OPEN :
             get_argument(esp, arg, 1);
-            check_address(arg[0]);                
+            check_address((void *)arg[0]);                
             f->eax = open((const char *)arg[0]);
             break;
+        //FILESIZE
         case SYS_FILESIZE :
             get_argument(esp, arg, 1);
             f->eax = filesize(arg[0]);
             break;
+        //READ
         case SYS_READ :
             get_argument(esp, arg , 3);
-            check_address(arg[1]);
+            check_address((void *)arg[1]);
             f -> eax = read(arg[0] , (void *)arg[1] , (unsigned)arg[2]);
             break;
+        //WRITE
         case SYS_WRITE :
             get_argument(esp, arg , 3);
-            check_address(arg[1]);
+            check_address((void *)arg[1]);
             f -> eax = write(arg[0] , (const void *)arg[1] , (unsigned)arg[2]);
             break;
+        //SEEK
         case SYS_SEEK :
             get_argument(esp , arg , 2);
             seek(arg[0] , (unsigned) arg[1]);
             break;
-
+        //TELL
         case SYS_TELL :
             get_argument(esp , arg , 1);
             f -> eax = tell(arg[0]);
             break;
-
+        //CLOSE
         case SYS_CLOSE :
             get_argument(esp , arg , 1);
             close(arg[0]);  
             break;
+        //NOT SYSCALL
         default :
             exit(-1);
     }  
@@ -112,16 +117,16 @@ syscall_handler (struct intr_frame *f) {
 
 /* Check if address point user domain */
 void check_address(void *addr) {
-    if(!(0x08048000 < addr && addr < 0xc0000000)) // user domain
+    if(!((void *)0x08048000 < addr && addr < (void *)0xc0000000)) // user domain
         exit(-1);
 }
 
 /* Copy Value in UserStack to Kernel */    
 void get_argument(void *esp, int *arg, int count) {
 
-    int i;
+    int i; //For loop
     int *ptr; //temp pointer
-    esp += 4;
+    esp += 4;//stack pointer
 
     for (i=0; i<count; i++) {
         ptr = (int *)esp + i; //Copy to temp pointer       
@@ -144,18 +149,17 @@ void exit(int status) {
 }
 
 tid_t exec(const char *cmd_line) {
+    
     //Process create
-    //tid_t tid = process_execute(cmd_line);
-
     tid_t tid;
     if((tid = process_execute (cmd_line)) == TID_ERROR)
         return TID_ERROR;
 
     //Find child process
-    struct thread *child = get_child_process(tid);
-
-    if(!child)
+    struct thread *child;
+    if ( !( child= get_child_process(tid) ) )
         return -1;
+
     //wait for child process tapjae
     sema_down(&child->load_sema);
     //if load success, return pid
@@ -188,9 +192,6 @@ int open(const char *file){
 
     int fd = -1;
     lock_acquire(&filesys_lock);
-    //filesys_open fail
-    //if (!f)
-    //    return -1;
     
     fd = process_add_file(filesys_open(file));
     //process_add_file 실패 경우도 생각해야함
@@ -212,15 +213,8 @@ int read(int fd, void *buffer, unsigned size){
     struct file *f;
 
     lock_acquire (&filesys_lock);
-    /*if (fd == 1)
-        return -1;*/
 
-    if (fd == 0){
-       /* unsigned i;
-        uint8_t* localbuf = (uint8_t*) buffer;
-        for (i = 0; i < size; i++){
-            localbuf[i] = input_getc();
-        }*/
+    if (fd == 0) {
         unsigned count = size;
         while (count--)
             *((char *)buffer++) = input_getc();
@@ -237,30 +231,7 @@ int read(int fd, void *buffer, unsigned size){
 
     lock_release(&filesys_lock);
     return size;
-/*    struct file *f;
-    pin_string (buffer, buffer + size, true);
-    lock_acquire (&filesys_lock);
 
-    if (fd == STDIN_FILENO)
-    {
-        // 표준 입력
-        unsigned count = size;
-        while (count--)
-            *((char *)buffer++) = input_getc();
-        lock_release (&filesys_lock);
-        unpin_string (buffer, buffer + size);
-        return size;
-    }
-    if ((f = process_get_file (fd)) == NULL)
-    {
-        lock_release (&filesys_lock);
-        unpin_string (buffer, buffer + size);
-        return -1;
-    }
-    size = file_read (f, buffer, size);
-    lock_release (&filesys_lock);
-    unpin_string (buffer, buffer + size);
-    return size;*/
 }
 
 int write(int fd, void *buffer, unsigned size){
@@ -285,8 +256,6 @@ int write(int fd, void *buffer, unsigned size){
     lock_release(&filesys_lock);
     return bytesize;
 }
-
-////////////////////실습
 
 void seek (int fd, unsigned position) {
     struct file *f = process_get_file(fd);
