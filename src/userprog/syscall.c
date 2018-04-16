@@ -1,4 +1,5 @@
 #include "userprog/syscall.h"
+#include "userprog/process.h"
 #include <stdio.h>
 #include <syscall-nr.h>
 #include "threads/interrupt.h"
@@ -6,6 +7,8 @@
 #include <devices/shutdown.h>
 #include <threads/thread.h>
 #include <filesys/filesys.h>
+#include <filesys/file.h>
+
 
 static void syscall_handler (struct intr_frame *);
 void check_address(void *addr);
@@ -172,6 +175,7 @@ tid_t exec(const char *cmd_line) {
 
 }
 
+//Call process_wait
 int wait(tid_t tid) {
     return process_wait(tid);
 }
@@ -186,49 +190,57 @@ bool remove(const char *file) {
     return success; //파일 제거에 성공하면 true리턴 
 }
 
-//실습내용 sudo
 int open(const char *file){
-//    struct fild *f = filesys_open(file);
 
     int fd = -1;
+    //Lock acquire
     lock_acquire(&filesys_lock);
-    
+   
+    //IF add fail, fd = -1
     fd = process_add_file(filesys_open(file));
-    //process_add_file 실패 경우도 생각해야함
 
+    //Lock release
     lock_release(&filesys_lock);
     return fd;
 }
 
 int filesize(int fd){
-    struct file *f = process_get_file(fd);
-    if (!f){
+    struct file *f;
+    //Get file
+    if (!(f = process_get_file(fd)))
         return -1;
-    }
+    //Use file_length in file.c
     return file_length(f);
 }  //open이 되었다는 가정 하에 진행
 
 int read(int fd, void *buffer, unsigned size){
 
     struct file *f;
-
+    
+    //Lock acquire
     lock_acquire (&filesys_lock);
 
-    if (fd == 0) {
+    if (fd == 0) {    
         unsigned count = size;
+        //Loop for size
         while (count--)
             *((char *)buffer++) = input_getc();
+        //Lock release
         lock_release(&filesys_lock);
         return size;
     } // fd값이 0인 파일은 파일크기가 없음. 키보드로부터 데이터를 읽어오는 >동작을 추가해줘야함
 
+    //If NULL file, return -1
     if((f = process_get_file(fd)) == NULL) {
+        //Lock release
         lock_release(&filesys_lock);
         return -1;
     }
 
+    //Get size
     size = file_read(f, buffer, size);
 
+    //Lock release
     lock_release(&filesys_lock);
     return size;
 
@@ -236,17 +248,19 @@ int read(int fd, void *buffer, unsigned size){
 
 int write(int fd, void *buffer, unsigned size){
 
+    //Lock acquire
     lock_acquire(&filesys_lock);
     if (fd == 1) {
         putbuf(buffer,size); //파일디스크립터가 1일 경우 버퍼에 저장된 갑승ㄹ 화면에 출력하고 버퍼의 크기를 리턴
+        //Lock release
         lock_release(&filesys_lock);
         return size;
     }
 
     //lock_acquire(&filesys_lock);
-    struct file *f = process_get_file(fd);
-
-    if (!f){
+    struct file *f;
+    
+    if (!(f = process_get_file(fd))) {
         lock_release(&filesys_lock);
         return -1;
     }
