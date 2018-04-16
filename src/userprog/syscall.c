@@ -1,14 +1,14 @@
 #include "userprog/syscall.h"
 #include "userprog/process.h"
-#include <stdio.h>
-#include <syscall-nr.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#include <stdio.h>
+#include <syscall-nr.h>
 #include <devices/shutdown.h>
 #include <threads/thread.h>
 #include <filesys/filesys.h>
 #include <filesys/file.h>
-
+#include <devices/input.h>
 
 static void syscall_handler (struct intr_frame *);
 void check_address(void *addr);
@@ -246,7 +246,7 @@ int read(int fd, void *buffer, unsigned size){
 
 }
 
-int write(int fd, void *buffer, unsigned size){
+int write (int fd, void *buffer, unsigned size) {
 
     //Lock acquire
     lock_acquire(&filesys_lock);
@@ -260,13 +260,17 @@ int write(int fd, void *buffer, unsigned size){
     //lock_acquire(&filesys_lock);
     struct file *f;
     
+    //Get file, if NULL, retuen -1 
     if (!(f = process_get_file(fd))) {
+        //Lock release
         lock_release(&filesys_lock);
         return -1;
     }
 
+    //Write and get size
     int bytesize = file_write(f, buffer, size);
 
+    //Lock release
     lock_release(&filesys_lock);
     return bytesize;
 }

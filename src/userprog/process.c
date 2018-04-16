@@ -27,53 +27,42 @@ static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
 
 //Add file to file discripter
-int process_add_file (struct file *f){
+int process_add_file (struct file *f) {
  
+    //If NULL file, return -1
     if (f == NULL)
         return -1;
-
+    //Get current thread
     struct thread *t = thread_current();
-  
+    //Input file into file discripter
     t->fdt[t->next_fd] = f;
-  
+    //Update next_fd
     t->next_fd++;
- 
+    //Return new file pid
     return t->next_fd - 1;
-
-/*    struct thread *t;
-    int fd;
-    if (f == NULL )
-        return -1;
-    t = thread_current ();
-    fd = t->next_fd++;
-    t->fdt[fd] = f;
-    return fd;*/
 }
 
+//Get file
 struct file *process_get_file (int fd){
+  //t = current thread
   struct thread *t = thread_current();
 
-/*  if (fd <= 1 || t->next_fd <= fd)
-      return NULL;
-  return t->fdt[fd];*/
+  //If not NULL, return file id
   if(t->fdt[fd] != NULL)
     return t->fdt[fd];
+  //NULL, return NULL
   return NULL;
 } 
 
+//Close file. NULL handling. 
 void process_close_file(int fd){
 
- // printf("\n\nprocess_close_file\n\n");
-    struct thread *t = thread_current();
+  struct thread *t = thread_current();
+  //If not NULL, call file_close
   if(t->fdt[fd] != NULL)
       file_close(t->fdt[fd]);
+  //Close file and input NULL in file discripter
   t->fdt[fd] = NULL;
-//  t->next_fd = fd;
-
-/*    if (fd <=1 || t->next_fd <=fd)
-        return;
-    file_close (t->fdt[fd]);
-    t->fdt[fd] = NULL;*/
 }
 
 //fdt를 다루는 커널함수들
@@ -140,10 +129,11 @@ void argument_stack(char **parse, int count, void **esp) {
     //Declaration of String 
     char **argv_ptrs;
     int i, j;
+    //Allocate argv pointer
     argv_ptrs = (char**)malloc(sizeof(char*)*(count+1));
     argv_ptrs[count] = 0;    
     
-    //Push argument n~1 into stack
+    //Push arguments into stack
     for(i=count-1;i>-1;i--) {
         for(j=strlen(parse[i]);j>-1;j--) {
             *esp -= 1;
@@ -151,8 +141,7 @@ void argument_stack(char **parse, int count, void **esp) {
         }
         argv_ptrs[i] = *esp; // storing address
     }
-    //Word-align
-    //For fast memory read
+    //Word-align for fast memory read
     while(*(int*)esp%4 != 0) {
         *esp -= 1;
         **(char**)esp = 0;
@@ -172,7 +161,7 @@ void argument_stack(char **parse, int count, void **esp) {
     //Fake return address
     *esp -= 4;
     **(long**)esp = 0;
-
+    //Free memory
     free(argv_ptrs);
 
 }
@@ -211,6 +200,7 @@ process_execute (const char *file_name) //프로그램 실행 할 프로세스 �
   /* Free the allocated memory */
   palloc_free_page (parsed_name);
 
+  //If fail, free memory
   if(tid == TID_ERROR) 
       palloc_free_page (fn_copy);
 
@@ -235,7 +225,7 @@ start_process (void *file_name_) //프로그램을 메모리에 탑재한 후 �
 
   /* Parse all tokens from arguments and count it */
   /* 인자들을 띄어쓰기 기준으로 토큰화 */
-  parse = palloc_get_page (0);
+  parse = palloc_get_page (0); //Allocate parse memory
   for (token = strtok_r (file_name, " ", &save_pointer); token != NULL;
           token = strtok_r (NULL, " ", &save_pointer)) {                
       parse[count] = palloc_get_page (0);                            
@@ -250,17 +240,20 @@ start_process (void *file_name_) //프로그램을 메모리에 탑재한 후 �
   if_.eflags = FLAG_IF | FLAG_MBS;
   success = load (parse[0], &if_.eip, &if_.esp); //file name (parse[0])
 
+  //Up load_sema
   sema_up(&thread_current()->load_sema);
 
   /* If load failed, quit. */
   if (!success) {
+      //loaded = false 
       thread_current() -> loaded = false;    
-      //free need?
+     
+      //Free memories
       palloc_free_page (file_name);
       for(i=0; i<count; i++) 
           palloc_free_page(parse[i]);
       palloc_free_page (parse);
-     
+     //thread exit
       thread_exit ();
   }
   else {
@@ -275,8 +268,10 @@ start_process (void *file_name_) //프로그램을 메모리에 탑재한 후 �
       
   }
 
+  //free memory
   palloc_free_page (file_name);
   
+  //Free parse memory
   for(i=0; i<count; i++) 
       palloc_free_page(parse[i]);
   palloc_free_page (parse);
@@ -309,14 +304,12 @@ process_wait (tid_t child_tid UNUSED)
   /* 예외 처리 발생시 -1 리턴 */ 
   if(!child)
       return -1;
-    /*struct thread *child;
-    if(!(child = process_get_child(child_tid)))
-        return -1;*/
 
   /* 자식프로세스가 종료될 때까지 부모 프로세스 대기(세마포어 이용) */
    if(!child->exited)
       sema_down(&child -> exit_sema);
-  
+
+  //Save exit status
   int status = child->exit_status;
   /* 자식 프로세스 디스크립터 삭제 */
   remove_child_process(child);  
@@ -332,24 +325,20 @@ process_exit (void)
   struct thread *cur = thread_current ();
   uint32_t *pd;
 //실습 : 유저프로세스가 파일을 닫지 않고 프로세스가 끝내려고 하는 경우 파일을 다 닫아주기 위함
-//  printf("\nbefore loop\n");
- 
+
+  //Close file discripter step by step
    while(cur->next_fd>2) {
       cur->next_fd--;
       process_close_file(cur->next_fd);
   }
-/*   int i;
-  for (i = 2; i < 60; i++){
-    process_close_file(i); //이 함수 내에서 NULL인지 검사하기 때문에 우리가 구현할 필요는 없다.
-  }i*/
-  
-// free(cur->fdt);
-//  printf("\nafter loop\n");
-//실습내용
-//printf("\nbefore exe close\n");
+ 
+
+  //Free memory of file discripter
   palloc_free_page(cur->fdt);
 /////메모리누수 없이 파일디스크립터 테이블 해제
- if (cur->executing_file != NULL){
+
+  //Close executing file
+  if (cur->executing_file != NULL){
     file_close(cur->executing_file);
   }
 

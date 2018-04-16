@@ -108,9 +108,9 @@ struct thread
     struct list_elem child_elem;
     //child list
     struct list child_list;
-    //memory
+    //If loaded
     bool loaded;
-    //if exit?
+    //If exited
     bool exited;
     //exit semaphore
     struct semaphore exit_sema;
@@ -119,9 +119,11 @@ struct thread
     //exit status
     int exit_status;
 
-  //실습내용
+  //Declare file discripter pointer
   struct file **fdt;
+  //Declare next file discripter
   int next_fd;
+  //Save current execution file
   struct file *executing_file;
   
 };

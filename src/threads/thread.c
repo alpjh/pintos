@@ -20,7 +20,6 @@
    of thread.h for details. */
 #define THREAD_MAGIC 0xcd6abf4b
 
-#define MAX_FILE 64
 
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
@@ -220,22 +219,14 @@ thread_create (const char *name, int priority,
   sema_init(&t->load_sema , 0);
   /* 자식 리스트에 추가 */
   list_push_back(&thread_current()->child_list, &t->child_elem);
- 
-  //실습 내용
-  t->fdt = palloc_get_page(0);
-  t->next_fd = 2;
-//  t->fdt -= t->next_fd;
-//  t->fdt = malloc(sizeof(struct file*)*MAX_FILE);
 
-/*  t->fdt = palloc_get_multiple (PAL_ZERO, 2);
-  if (t->fdt == NULL) {
-      palloc_free_page(t);
-      return TID_ERROR;
-  }
+  //Allocate file discripter
+  t->fdt = palloc_get_page(0);
+  //Initiallize next_fd = 2
   t->next_fd = 2;
-  t->fdt -= t->next_fd;*/
- /* Add to run queue. */
- thread_unblock (t);
+
+  /* Add to run queue. */
+  thread_unblock (t);
 
   return tid;
 }
