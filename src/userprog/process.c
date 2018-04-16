@@ -136,7 +136,7 @@ int count_token(const char* str) {
 
 /* Command Line Parsing */
 void argument_stack(char **parse, int count, void **esp) {
-    
+    //유저 스택에 프로그램 이름과 인자 저장하는 함수
     //Declaration of String 
     char **argv_ptrs;
     int i, j;
@@ -147,7 +147,7 @@ void argument_stack(char **parse, int count, void **esp) {
     for(i=count-1;i>-1;i--) {
         for(j=strlen(parse[i]);j>-1;j--) {
             *esp -= 1;
-            **(char**)esp = parse[i][j];
+            **(char**)esp = parse[i][j]; 
         }
         argv_ptrs[i] = *esp; // storing address
     }
@@ -182,7 +182,7 @@ void argument_stack(char **parse, int count, void **esp) {
    before process_execute() returns.  Returns the new process's
    thread id, or TID_ERROR if the thread cannot be created. */
 tid_t
-process_execute (const char *file_name) 
+process_execute (const char *file_name) //프로그램 실행 할 프로세스 생성 
 {
   char *fn_copy;
   tid_t tid;
@@ -202,10 +202,12 @@ process_execute (const char *file_name)
   if (parsed_name == NULL)
       return TID_ERROR;
   strlcpy (parsed_name, file_name, PGSIZE);
-  parsed_name = strtok_r(parsed_name, " ", &save_pointer);
+  parsed_name = strtok_r(parsed_name, " ", &save_pointer); //문자열을 공백 기준으로 파싱
 
   /* Create a new thread to execute FILE_NAME. */
-  tid = thread_create (parsed_name, PRI_DEFAULT, start_process, fn_copy);
+  /*커맨드 라인의 첫 번째 토큰 (parsed_name) 인자로 전달*/
+  tid = thread_create (parsed_name, PRI_DEFAULT, start_process, fn_copy); 
+
   /* Free the allocated memory */
   palloc_free_page (parsed_name);
 
@@ -218,7 +220,7 @@ process_execute (const char *file_name)
 /* A thread function that loads a user process and starts it
    running. */
 static void
-start_process (void *file_name_)
+start_process (void *file_name_) //프로그램을 메모리에 탑재한 후 응용 프로그램을 실행하는 함수
 {
   char *file_name = file_name_;
   struct intr_frame if_;
@@ -232,6 +234,7 @@ start_process (void *file_name_)
   int i = 0;
 
   /* Parse all tokens from arguments and count it */
+  /* 인자들을 띄어쓰기 기준으로 토큰화 */
   parse = palloc_get_page (0);
   for (token = strtok_r (file_name, " ", &save_pointer); token != NULL;
           token = strtok_r (NULL, " ", &save_pointer)) {                
