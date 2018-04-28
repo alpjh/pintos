@@ -91,6 +91,10 @@ struct thread
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
 
+    //alarm_clock
+    int64_t wakeup_tick;
+
+
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
@@ -163,5 +167,13 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
+
+//alarm_clock
+void thread_sleep (int64_t ticks); /* 실행중인스레드를슬립으로만듬*/
+void thread_awake (int64_t ticks); /* 슬립큐에서깨워야할스레드를깨움*/
+void update_next_tick_to_awake (int64_t ticks); /*최소틱을가진 스레드저장*/
+int64_t get_next_tick_to_awake (void); /* thread.c의 next_tick_to_awake반환*/
+                                        
+
 
 #endif /* threads/thread.h */

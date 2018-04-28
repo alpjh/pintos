@@ -29,6 +29,11 @@ static struct list ready_list;
    when they are first scheduled and removed when they exit. */
 static struct list all_list;
 
+//List for store BLOCKED thread
+static struct list sleep_list;
+//Store min wakeup_tick
+int64_t next_tick_to_awake = INT64_MAX;
+
 /* Idle thread. */
 static struct thread *idle_thread;
 
@@ -93,6 +98,10 @@ thread_init (void)
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
+
+  //alarm_clock
+  //init sleep_list 
+  list_init (&sleep_list);
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
@@ -615,7 +624,64 @@ allocate_tid (void)
 
   return tid;
 }
-
+
+void thread_sleep (int64_t ticks) {
+
+    struct thread *cur = thread_current();
+    enum intr_level old_level; 
+
+    old_level = intr_disable(); //disable interrupt
+    
+
+    /*현재스레드가idle 스레드가아닐경우*/
+    if (cur != idle_thread) {
+        /*thread 상태를BLOCKED로바꾸고깨어나야할ticks을저장*/
+        cur->status = THREAD_BLOCKED;
+        cur->wakeup_tick = ticks;
+        /*슬립큐에삽입하고, awake함수가실행되어야할tick값을update*/
+        list_push_back (&sleep_list, &cur->elem);
+        update_next_tick_to_awake (ticks);
+    }
+
+    /* 현재스레드를슬립큐에삽입한후에스케줄한다. */
+    schedule();
+    //reset interrrupt level
+    intr_set_level (old_level);
+}
+
+void thread_awake (int64_t ticks) {
+    
+    struct list_elem *e;
+    e = list_begin (&sleep_list);
+    /* sleep list의모든entry 를순회하며다음과같은작업을수행한다.*/
+    while (e != list_end (&sleep_list)) {
+        struct thread *t = list_entry (e, struct thread, elem);
+        /* 깨워야할tick이현재tick 보다크다면*/
+        if (ticks >= t->wakeup_tick) {
+            /* 슬립큐에서제거하고unblock 한다. */
+            e = list_remove (e);
+            thread_unblock(t);
+        }
+        else {
+            /* 작다면update_next_tick_to_awake() 를호출한다. */
+            update_next_tick_to_awake (t->wakeup_tick);
+            e = list_next(e);
+        }
+    }
+}
+
+/* next_tick_to_awake가깨워야할스레드중가장작은tick을갖도록 업데이트한다*/
+void update_next_tick_to_awake (int64_t ticks) {
+    //If new value is bigger than old value, update next_tick_to_awake
+    if (next_tick_to_awake > ticks) {
+        next_tick_to_awake = ticks;   
+    }
+}
+int64_t get_next_tick_to_awake (void) {
+    /* next_tick_to_awake을반환한다. */
+    return next_tick_to_awake;
+}
+
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
