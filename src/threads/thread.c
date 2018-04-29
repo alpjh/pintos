@@ -237,6 +237,11 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
 
+  /* 생성된 스레드의 우선순위가 현재 실행중 스레드의 
+     우선순위보다 높다면 CPU를 양보한다.*/
+  if (t->priority > thread_current()->priority)
+      thread_yield(); // aimai
+
   return tid;
 }
 
@@ -273,7 +278,10 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_push_back (&ready_list, &t->elem);
+  //list_push_back (&ready_list, &t->elem);
+  /* 우선순위 순으로 정렬되어 ready_list에 삽입 */
+  list_insert_ordered (&ready_list, &t->elem, cmp_priority, NULL);
+ //aimai 
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -351,8 +359,11 @@ thread_yield (void)
   ASSERT (!intr_context ());
 
   old_level = intr_disable ();
+  /* 현재thread가CPU를양보하여ready_list에삽입될때
+      우선순위순서로정렬되어삽입 */
   if (cur != idle_thread) 
-    list_push_back (&ready_list, &cur->elem);
+      list_insert_ordered(& ready_list, &cur-> elem, cmp_priority, NULL);
+    //list_push_back (&ready_list, &cur->elem);
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -380,6 +391,8 @@ void
 thread_set_priority (int new_priority) 
 {
   thread_current ()->priority = new_priority;
+  /* 스레드의 우선순위가 변경되었을때 우선순위에 따라 선점이 발생하도록 한다. */
+  test_max_priority();
 }
 
 /* Returns the current thread's priority. */
@@ -677,9 +690,35 @@ void update_next_tick_to_awake (int64_t ticks) {
         next_tick_to_awake = ticks;   
     }
 }
+
 int64_t get_next_tick_to_awake (void) {
     /* next_tick_to_awake을반환한다. */
     return next_tick_to_awake;
+}
+
+/* 현재 스레드와 가장 높은 우선순위의 스레드의 우선순위를 비교하여 스케줄링*/
+void test_max_priority (void) {
+    
+    //ready_list가비여있지않은지확인 
+    if (list_empty (&ready_list))
+        return;
+
+    // t = front elem of ready_list == highest priority
+    struct thread *t = list_entry (list_front (&ready_list), struct thread, elem);
+
+    //current priority < highest priority -> yield
+    if (thread_current()->priority < t->priority)
+        thread_yield();
+}
+
+/* list_insert_ordered() 함수에서 사용하기 위해 정열방법을 결정 */
+bool cmp_priority (const struct list_elem* a_,
+                   const struct list_elem* b_, 
+                   void *aux UNUSED) {
+    const struct thread* a = list_entry(a_, struct thread, elem);
+    const struct thread* b = list_entry(b_, struct thread, elem);
+    return a->priority > b->priority; 
+
 }
 
 /* Offset of `stack' member within `struct thread'.

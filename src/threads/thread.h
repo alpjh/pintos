@@ -173,7 +173,11 @@ void thread_sleep (int64_t ticks); /* 실행중인스레드를슬립으로만듬
 void thread_awake (int64_t ticks); /* 슬립큐에서깨워야할스레드를깨움*/
 void update_next_tick_to_awake (int64_t ticks); /*최소틱을가진 스레드저장*/
 int64_t get_next_tick_to_awake (void); /* thread.c의 next_tick_to_awake반환*/
-                                        
+//priority scheduling
+void test_max_priority (void);
+bool cmp_priority (const struct list_elem *a, 
+                   const struct list_elem *b,
+                   void *aux UNUSED);
 
 
 #endif /* threads/thread.h */
