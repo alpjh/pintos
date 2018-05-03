@@ -20,6 +20,8 @@
    of thread.h for details. */
 #define THREAD_MAGIC 0xcd6abf4b
 
+//void donate_priority() 구현 필요
+
 
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
@@ -359,11 +361,12 @@ thread_yield (void)
   ASSERT (!intr_context ());
 
   old_level = intr_disable ();
-  /* 현재thread가CPU를양보하여ready_list에삽입될때
-      우선순위순서로정렬되어삽입 */
+  /* 현재 thread가 CPU를 양보하여 ready_list에 삽입될때
+      우선순위 순서로 정렬되어 삽입 */
   if (cur != idle_thread) 
       list_insert_ordered(& ready_list, &cur-> elem, cmp_priority, NULL);
     //list_push_back (&ready_list, &cur->elem);
+ 
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
