@@ -336,15 +336,21 @@ thread_exit (void)
   /* Remove thread from all threads list, set our status to dying,
      and schedule another process.  That process will destroy us
      when it calls thread_schedule_tail(). */
-  intr_disable ();
-  list_remove (&thread_current()->allelem);
-  thread_current ()->status = THREAD_DYING;
+//  intr_disable ();
+//  list_remove (&thread_current()->allelem);
+//  thread_current ()->status = THREAD_DYING;
 
   /* 프로세스 디스크립터에 프로세스 종료를 알림 */ 
   t->exited = true;
 
   /* 부모프로세스의 대기 상태 이탈(세마포어 이용) */
   sema_up(&t -> exit_sema);
+
+  intr_disable ();
+  list_remove (&thread_current()->allelem);
+  //This code occurs ASSERTION in thread_current when on sema_up
+  thread_current ()->status = THREAD_DYING;
+
 
   schedule ();
   NOT_REACHED ();
@@ -701,14 +707,12 @@ int64_t get_next_tick_to_awake (void) {
 
 /* 현재 스레드와 가장 높은 우선순위의 스레드의 우선순위를 비교하여 스케줄링*/
 void test_max_priority (void) {
-    
+   
     //ready_list가비여있지않은지확인 
     if (list_empty (&ready_list))
         return;
-
     // t = front elem of ready_list == highest priority
     struct thread *t = list_entry (list_front (&ready_list), struct thread, elem);
-
     //current priority < highest priority -> yield
     if (thread_current()->priority < t->priority)
         thread_yield();
