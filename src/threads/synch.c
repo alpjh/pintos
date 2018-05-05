@@ -223,18 +223,24 @@ lock_acquire (struct lock *lock)
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
   
-  /*
-
+  /* 해당lock 의holder가존재한다면 */
   if (lock->holder) {
-    thread_current()->wait_on_lock = lock
-    if (thread_current()->priority > lock->holder->priority)
-    list_insert_ordered(thread_current()->donations, thread_current()->donation_elem,cmp_priority, NULL)
-    donate_priority()
+      /* 현재 스레드의 wait_on_lock 변수에 lock의 주소를 저장 */
+      thread_current()->wait_on_lock = lock;
+      //If current priority > holder priority. donate 
+      if (thread_current()->priority > lock->holder->priority) {
+          list_insert_ordered (&lock->holder->donations, 
+                               &thread_current()->donation_elem, 
+                               cmp_priority, NULL);
+          /* priority donation 수행하기 위해 donate_priority() 함수 호출*/
+          donate_priority();
+      }
   }
-  
-  */
 
   sema_down (&lock->semaphore);
+
+  thread_current()->wait_on_lock= NULL;
+  /* lock을획득한후lock holder 를갱신한다. */
   lock->holder = thread_current ();
 }
 
@@ -268,15 +274,12 @@ lock_release (struct lock *lock)
 {
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
-  
-  //remove_with_lock
-/*
-  if (&list_empty(인자 생략)&&우선순위 비교)
-    lock->holder->priority = list_entry(list_begin(&lock->donations), struct thread, donations_elem)->priority; donation list 에서 우선순위가 가장 높은 것으로 갈아타는 것
-  else lock->holder->priority = lock->holder->init_priority
-  이것이 refresh_priority()함수의 동작
-  */
+ 
   lock->holder = NULL;
+  //When release, remove this in donation list
+  remove_with_lock (lock);
+  //Refresh priority
+  refresh_priority ();
   sema_up (&lock->semaphore);
 }
 
@@ -342,6 +345,8 @@ cond_wait (struct condition *cond, struct lock *lock)
   sema_init (&waiter.semaphore, 0);
   //list_push_back (&cond->waiters, &waiter.elem);
   //list_push_back은 주석처리하고 list_insert_ordered 함수 추가
+  /* condition variable의 waiters list에 우선순위순서로
+     삽입되도록 수정*/
   list_insert_ordered (&cond->waiters, &waiter.elem, &cmp_sem_priority, NULL);
   lock_release (lock);
   sema_down (&waiter.semaphore);
@@ -365,6 +370,7 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED)
 
   if (!list_empty (&cond->waiters)) { 
     //우선순위가 바뀌었을 가능성이 있으므로 sorting 필요
+    /* condition variable의 waiters list를 우선순위로 재 정열 */
     list_sort (&cond->waiters, &cmp_sem_priority, NULL);
     sema_up (&list_entry (list_pop_front (&cond->waiters),
                           struct semaphore_elem, elem)->semaphore);

@@ -129,6 +129,15 @@ struct thread
   int next_fd;
   //Save current execution file
   struct file *executing_file;
+
+  //donation이후 우선순위를 초기 화하기 위해 초기값 저장
+  int init_priority;
+  //해당 스레드가 대기하고 있는 lock 자료구조의 주소를 저장
+  struct lock *wait_on_lock;
+  //For multiple donation
+  struct list donations;
+  //For multiple donation
+  struct list_elem donation_elem;
   
 };
 
@@ -178,6 +187,9 @@ void test_max_priority (void);
 bool cmp_priority (const struct list_elem *a, 
                    const struct list_elem *b,
                    void *aux UNUSED);
-
+//priority donation
+void donate_priority (void);
+void remove_with_lock (struct lock *lock);
+void refresh_priority (void);
 
 #endif /* threads/thread.h */
