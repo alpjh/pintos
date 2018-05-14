@@ -105,7 +105,10 @@ struct thread
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
-    
+ 
+    /* 스레드가 가진 가상주소공간을 관리하는 해시테이블*/
+    struct hash vm; 
+
     //parent process discripter
     struct thread *parent;
     //child list element

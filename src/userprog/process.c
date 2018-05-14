@@ -223,6 +223,9 @@ start_process (void *file_name_) //프로그램을 메모리에 탑재한 후 �
   int count = 0;
   int i = 0;
 
+  /* vm_init()함수를 이용해서 해시테이블 초기화 */
+  vm_init(&thread_current()->vm);
+
   /* Parse all tokens from arguments and count it */
   /* 인자들을 띄어쓰기 기준으로 토큰화 */
   parse = palloc_get_page (0); //Allocate parse memory
@@ -342,8 +345,9 @@ process_exit (void)
     file_close(cur->executing_file);
   }
 
+  /* vm_entry들을 제거하는 함수 추가 */
+  vm_destroy (&cur->vm);
 
-//
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;
