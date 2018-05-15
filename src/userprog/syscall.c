@@ -36,7 +36,7 @@ static void
 syscall_handler (struct intr_frame *f) {
 
     uint32_t *esp = f->esp;// Get user stack pointer
-    check_address((void *)esp); // 주소값이 유효한지 확인
+    check_address((void *)esp, (void *)esp); // 주소값이 유효한지 확인
     int syscall_nr = *esp; 
     int arg[3];
     
@@ -119,9 +119,15 @@ syscall_handler (struct intr_frame *f) {
 }
 
 /* Check if address point user domain */
-void check_address(void *addr) {
+struct vm_entry* check_address(void *addr, void *esp) {
     if(!((void *)0x08048000 < addr && addr < (void *)0xc0000000)) // user domain
         exit(-1);
+    /*addr이vm_entry에존재하면vm_entry를반환하도록코드작성*/
+    /*find_vme() 사용*/
+    struct vm_entry* vme;
+    if (vme = find_vme((void*)addr))
+        return vme;
+    return NULL;
 }
 
 /* Copy Value in UserStack to Kernel */    

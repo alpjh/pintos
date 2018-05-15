@@ -717,6 +717,17 @@ setup_stack (void **esp)
       else
         palloc_free_page (kpage);
     }
+  /* vm_entry 생성 */
+  struct vm_entry *vme = malloc(sizeof(struct vm_entry));  
+  /* vm_entry 멤버들 설정 */
+  vme->vaddr = ((uint8_t *)PHYS_BASE) - PGSIZE;
+  vme->writable = true;
+  vme->type = VM_ANON;
+  vme->is_loaded = true;
+  vme->pinned = false;
+  /* insert_vme() 함수로 해시테이블에 추가 */
+  insert_vme (&thread_current()->vm, vme);
+
   return success;
 }
 
