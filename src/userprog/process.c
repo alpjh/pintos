@@ -655,25 +655,43 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
       /* Get a page of memory. */
-      uint8_t *kpage = palloc_get_page (PAL_USER);
+/*      uint8_t *kpage = palloc_get_page (PAL_USER);
       if (kpage == NULL)
         return false;
-
+*/
       /* Load this page. */
-      if (file_read (file, kpage, page_read_bytes) != (int) page_read_bytes)
+/*      if (file_read (file, kpage, page_read_bytes) != (int) page_read_bytes)
         {
           palloc_free_page (kpage);
           return false; 
         }
       memset (kpage + page_read_bytes, 0, page_zero_bytes);
-
+*/
       /* Add the page to the process's address space. */
-      if (!install_page (upage, kpage, writable)) 
+/*      if (!install_page (upage, kpage, writable)) 
         {
           palloc_free_page (kpage);
           return false; 
         }
+*/
 
+      /* vm_entry 생성 (malloc사용) */
+      struct vm_entry* vme = malloc (sizeof (struct vm_entry));
+
+      /* vm_entry 멤버들 설정, 가상페이지가 요구될 때 읽어야할 
+         파일의 오프셋과 사이즈, 마지막에 패딩할 제로바이트 등등 */
+      vme->offset = ofs;
+      vme->type = VM_BIN;
+      vme->writable = writable;
+      vme->is_loaded = false;
+      vme->file = file;
+      vme->vaddr = upage;
+      vme->read_bytes = page_read_bytes;
+      vme->zero_bytes = page_zero_bytes;
+
+      /* insert_vme() 함수를 사용해서 생성한 vm_entry를 해시테이블에 추가 */
+      insert_vme (&thread_current()->vm, vme);
+        
       /* Advance. */
       read_bytes -= page_read_bytes;
       zero_bytes -= page_zero_bytes;
