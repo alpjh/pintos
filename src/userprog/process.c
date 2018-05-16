@@ -676,16 +676,17 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 */
 
       /* vm_entry 생성 (malloc사용) */
-      struct vm_entry* vme = malloc (sizeof (struct vm_entry));
-
+      struct vm_entry* vme = (struct vm_entry *)malloc (sizeof (struct vm_entry));
+      if (vme == NULL)
+          return false;
       /* vm_entry 멤버들 설정, 가상페이지가 요구될 때 읽어야할 
          파일의 오프셋과 사이즈, 마지막에 패딩할 제로바이트 등등 */
-      vme->offset = ofs;
       vme->type = VM_BIN;
+      vme->vaddr = upage;
       vme->writable = writable;
       vme->is_loaded = false;
       vme->file = file;
-      vme->vaddr = upage;
+      vme->offset = ofs;
       vme->read_bytes = page_read_bytes;
       vme->zero_bytes = page_zero_bytes;
 
@@ -695,6 +696,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       /* Advance. */
       read_bytes -= page_read_bytes;
       zero_bytes -= page_zero_bytes;
+      ofs += page_read_bytes;
       upage += PGSIZE;
     }
   return true;
@@ -718,7 +720,9 @@ setup_stack (void **esp)
         palloc_free_page (kpage);
     }
   /* vm_entry 생성 */
-  struct vm_entry *vme = malloc(sizeof(struct vm_entry));  
+  struct vm_entry *vme;
+  if ( !(vme = malloc(sizeof(struct vm_entry))) )
+    return false;
   /* vm_entry 멤버들 설정 */
   vme->vaddr = ((uint8_t *)PHYS_BASE) - PGSIZE;
   vme->writable = true;
