@@ -11,9 +11,9 @@
 #include <devices/input.h>
 
 static void syscall_handler (struct intr_frame *);
-void check_address(void *addr);
+struct vm_entry* check_address(void *addr, void* esp);
 void get_argument(void *esp, int *arg, int count);
-
+ 
 void halt (void);
 void exit (int status);
 int wait(tid_t tid);
@@ -88,7 +88,8 @@ syscall_handler (struct intr_frame *f) {
         //READ
         case SYS_READ :
             get_argument(esp, arg , 3);
-            check_address((void *)arg[1]);
+            //check_address((void *)arg[1]);
+            check_valid_buffer ((void *)arg[1], (unsigned)arg[2], f->esp, true), ;
             f -> eax = read(arg[0] , (void *)arg[1] , (unsigned)arg[2]);
             break;
         //WRITE
