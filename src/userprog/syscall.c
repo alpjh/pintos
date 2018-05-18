@@ -54,7 +54,8 @@ syscall_handler (struct intr_frame *f) {
         //EXEC
         case SYS_EXEC :
             get_argument(esp, arg, 1);
-            check_address((void *) arg[0]);
+            /* buffer 사용유무를 고려하여 유효성 검사*/     
+            check_valid_string((const void *) arg[0], f->esp);
             f->eax = exec((const char *)arg[0]);
             break;
         //WAIT
@@ -77,7 +78,8 @@ syscall_handler (struct intr_frame *f) {
         //OPEN
         case SYS_OPEN :
             get_argument(esp, arg, 1);
-            check_address((void *)arg[0]);                
+            /* buffer 사용유무를 고려하여 유효성 검사 */
+            check_valid_string((const void *)arg[0], f->esp);
             f->eax = open((const char *)arg[0]);
             break;
         //FILESIZE
@@ -89,14 +91,19 @@ syscall_handler (struct intr_frame *f) {
         case SYS_READ :
             get_argument(esp, arg , 3);
             //check_address((void *)arg[1]);
-            check_valid_buffer ((void *)arg[1], (unsigned)arg[2], f->esp, true), ;
+            check_valid_buffer ((void *)arg[1], (unsigned)arg[2], 
+                                f->esp, true);
             f -> eax = read(arg[0] , (void *)arg[1] , (unsigned)arg[2]);
             break;
         //WRITE
         case SYS_WRITE :
             get_argument(esp, arg , 3);
-            check_address((void *)arg[1]);
-            f -> eax = write(arg[0] , (const void *)arg[1] , (unsigned)arg[2]);
+            //check_address((void *)arg[1]);
+            /* buffer 사용 유무를 고려하여 유효성 검사 */
+            check_valid_buffer((void *) arg[1], (unsigned) arg[2], 
+                               f->esp,  false);
+            f -> eax = write(arg[0] , (const void *)arg[1] , 
+                             (unsigned)arg[2]);
             break;
         //SEEK
         case SYS_SEEK :
@@ -306,4 +313,36 @@ void close (int fd) {
     process_close_file(fd); //파일 닫음
 }
 
+void check_valid_buffer (void *buffer, unsigned size, void *esp, 
+                         bool to_write) {
+    unsigned i;
+    char *local_buffer = (char *)buffer;
+    /* 인자로 받은 buffer부터 buffer + size까지의 크기가 한페이지의 
+       크기를 넘을 수 도 있음 */
+    /* check_address를 이용해서 주소의 유저영역여부를 검사함과 동시에 
+       vm_entry구조체를 얻음 */
+    struct vm_entry *vme = check_address ((const void*)local_buffer, esp);
+    /* 해당 주소에 대한 vm_entry 존재여부와 vm_entry의 writable멤버가
+       true인지 검사 */
+    if (vme && to_write) {
+        if (!vme->writable) {
+            exit(-1);
+        }
+    }
+    local_buffer++;
+    /* 위 내용을 buffer부터 buffer + size까지의 주소에 포함되는
+       vm_entry들에 대해 적용 */
+}
 
+void check_valid_string (const void *str, void *esp) {
+    /* str에 대한 vm_entry의 존재여부를 확인 */
+    //if no vm_entry in str, check address return NULL
+    if (!check_address (str, esp))
+        return;
+    /* check_address()사용 */
+    //for all str. check address. 
+    while (*(char *)str != 0) {
+        //start from str 1. str0 did it up line. 
+        str = (char *) str + 1;
+        check_address(str, esp);
+    }}

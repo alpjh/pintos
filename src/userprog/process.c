@@ -22,6 +22,7 @@
 #include "threads/vaddr.h"
 #include "threads/malloc.h"
 
+#include "vm/page.h"
 #define MAX_FILE 64
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
@@ -728,7 +729,6 @@ setup_stack (void **esp)
   vme->writable = true;
   vme->type = VM_ANON;
   vme->is_loaded = true;
-  vme->pinned = false;
   /* insert_vme() 함수로 해시테이블에 추가 */
   insert_vme (&thread_current()->vm, vme);
 

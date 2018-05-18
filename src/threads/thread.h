@@ -5,6 +5,7 @@
 #include <list.h>
 #include <stdint.h>
 #include "synch.h"
+#include <hash.h>
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -105,9 +106,6 @@ struct thread
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
- 
-    /* 스레드가 가진 가상주소공간을 관리하는 해시테이블*/
-    struct hash vm; 
 
     //parent process discripter
     struct thread *parent;
@@ -141,6 +139,9 @@ struct thread
   struct list donations;
   //For multiple donation
   struct list_elem donation_elem;
+ 
+  /* 스레드가 가진 가상주소공간을 관리하는 해시테이블*/
+  struct hash vm; 
   
 };
 

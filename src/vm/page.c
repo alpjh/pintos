@@ -81,25 +81,4 @@ void vm_destroy_func (struct hash_elem *e, void *aux UNUSED) {
     free (vme);
 }
 
-void check_valid_buffer (void *buffer, unsignedsize, 
-                         void *esp, boolto_write) {
-    /* 인자로 받은 buffer부터 buffer + size까지의 크기가 한페이지의 
-       크기를넘을수도있음 */
-    
-    /*check_address를 이용해서 주소의 유저영역여부를 검사함과동시에
-      vm_entry 구조체를 얻음 */
-    
-    /* 해당 주소에 대한 vm_entry 존재여부와 vm_entry의 writable 멤버가
-       true인지 검사 */
 
-    /* 위 내용을 buffer부터 buffer + size까지의 주소에 포함되는 
-       vm_entry들에 대해 적용 */
-
-}
-
-void check_valid_string (const void *str, void *esp) {
-    /* str에 대한 vm_entry의 존재 여부를 확인 */
-    
-    /* check_address() 사용 */
-
-}
