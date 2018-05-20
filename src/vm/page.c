@@ -81,4 +81,27 @@ void vm_destroy_func (struct hash_elem *e, void *aux UNUSED) {
     free (vme);
 }
 
+bool load_file (void *kaddr, struct vm_entry *vme) {
+    /*Using file_read_at()*/
 
+    /* file_read_at으로물리페이지에read_bytes만큼데이터를씀*/
+    /* file_read_at여부반환*/
+    /* zero_bytes만큼남는부분을‘0’으로패딩*/
+    /*정상적으로file을메모리에loading 하면true 리턴*/
+    if(vme->read_bytes > 0)
+    {
+        lock_acquire(&filesys_lock);
+        if((int)vme->read_bytes != file_read_at(vme->file, 
+                                                kaddr, 
+                                                vme->read_bytes, 
+                                                vme->offset)) {
+            lock_release(&filesys_lock);
+            return false;
+        }
+        lock_release(&filesys_lock);
+        memset(kaddr + vme->read_bytes, 0, vme->zero_bytes);
+    }
+    else
+        memset(kaddr, 0, PGSIZE);
+    return true;
+}

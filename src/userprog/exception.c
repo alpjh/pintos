@@ -128,7 +128,6 @@ page_fault (struct intr_frame *f)
   bool user;         /* True: access by user, false: access by kernel. */
   void *fault_addr;  /* Fault address. */
 
-  exit(-1);
   /* Obtain faulting address, the virtual address that was
      accessed to cause the fault.  It may point to code or to
      data.  It is not necessarily the address of the instruction
@@ -150,18 +149,28 @@ page_fault (struct intr_frame *f)
   write = (f->error_code & PF_W) != 0;
   user = (f->error_code & PF_U) != 0;
 
-  //실습
-  exit(-1);
-  //
+  /* read only 페이지에 대한 접근이 아닐 경우 */
+  //if writing read-only -> not_present = false
+  if (!not_present)
+      exit(-1);
+  /* 페이지폴트가 일어난 주소에 대한 vm_entry 구조체 탐색 */
+  struct vm_entry *vme;
+  if (vme = find_vme (fault_addr)) {     
+      /* vm_entry를 인자로 넘겨주며 handle_mm_fault() 호출 */
+      load = handle_mm_fault(vme);
+  }
 
-  /* To implement virtual memory, delete the rest of the function
-     body, and replace it with code that brings in the page to
-     which fault_addr refers. */
-  printf ("Page fault at %p: %s error %s page in %s context.\n",
-          fault_addr,
-          not_present ? "not present" : "rights violation",
-          write ? "writing" : "reading",
-          user ? "user" : "kernel");
-  kill (f);
+  /* 제대로 파일이 물리메모리에 로드되고 맵핑됬는지 검사 */
+  if(!load) {
+      /* To implement virtual memory, delete the rest of the function
+         body, and replace it with code that brings in the page to
+         which fault_addr refers. */
+      printf ("Page fault at %p: %s error %s page in %s context.\n",
+              fault_addr,
+              not_present ? "not present" : "rights violation",
+              write ? "writing" : "reading",
+              user ? "user" : "kernel");
+      kill (f);
+  }
 }
 
