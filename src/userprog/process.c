@@ -21,93 +21,13 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "threads/malloc.h"
+
 #include "vm/page.h"
 
 #define MAX_FILE 64
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
-
-
-//Add file to file discripter
-int process_add_file (struct file *f) {
-
-    //If NULL file, return -1
-    if (f == NULL)
-        return -1;
-    //Get current thread
-    struct thread *t = thread_current();
-    //Input file into file discripter
-    t->fdt[t->next_fd] = f;
-    //Update next_fd
-    t->next_fd++;
-    //Return new file pid
-    return t->next_fd - 1;
-}
-
-//Get file
-struct file *process_get_file (int fd){
-    //t = current thread
-    struct thread *t = thread_current();
-
-    //If not NULL, return file id
-    if(t->fdt[fd] != NULL)
-        return t->fdt[fd];
-    //NULL, return NULL
-    return NULL;
-} 
-
-//Close file. NULL handling. 
-void process_close_file(int fd){
-
-    struct thread *t = thread_current();
-    //If not NULL, call file_close
-    if(t->fdt[fd] != NULL)
-        file_close(t->fdt[fd]);
-    //Close file and input NULL in file discripter
-    t->fdt[fd] = NULL;
-}
-
-//fdt를 다루는 커널함수들
-
-/* Find child element that equal pid argument */
-struct thread *get_child_process (int pid) {
-    //Get current thread to cur
-    struct thread *cur = thread_current();
-    //Get head of child list to elem
-    struct list_elem *elem = list_begin(&cur->child_list);
-    //For store next element
-    struct list_elem *next;
-
-    //Find equal element
-    while (elem != list_end(&cur -> child_list)) {
-
-        //List entry
-        struct thread *cp = list_entry(elem, struct thread, child_elem);
-
-        //Save next list in next variable
-        next = list_next(elem); 
-
-        //If same child in child_list, return 
-        if (pid == cp->tid) {
-            return cp;
-        }
-        //Go to next child 
-        elem = next;
-    }
-    //No matching child
-    return NULL;
-
-}
-
-
-void remove_child_process (struct thread *cp) {
-
-    //remove child process
-    list_remove(&cp->child_elem);
-    //free memory
-    palloc_free_page(cp);
-}
 
 
 int count_token(const char* str) {
@@ -576,7 +496,7 @@ done:
     // file_close (file);
     return success;
 }
-
+
 /* load() helpers. */
 
 static bool install_page (void *upage, void *kpage, bool writable);
@@ -746,7 +666,7 @@ setup_stack (void **esp)
    with palloc_get_page().
    Returns true on success, false if UPAGE is already mapped or
    if memory allocation fails. */
-    static bool
+static bool
 install_page (void *upage, void *kpage, bool writable)
 {
     struct thread *t = thread_current ();
@@ -755,6 +675,87 @@ install_page (void *upage, void *kpage, bool writable)
        address, then map our page there. */
     return (pagedir_get_page (t->pagedir, upage) == NULL
             && pagedir_set_page (t->pagedir, upage, kpage, writable));
+}
+
+
+//Add file to file discripter
+int process_add_file (struct file *f) {
+
+    //If NULL file, return -1
+    if (f == NULL)
+        return -1;
+    //Get current thread
+    struct thread *t = thread_current();
+    //Input file into file discripter
+    t->fdt[t->next_fd] = f;
+    //Update next_fd
+    t->next_fd++;
+    //Return new file pid
+    return t->next_fd - 1;
+}
+
+//Get file
+struct file *process_get_file (int fd){
+    //t = current thread
+    struct thread *t = thread_current();
+
+    //If not NULL, return file id
+    if(t->fdt[fd] != NULL)
+        return t->fdt[fd];
+    //NULL, return NULL
+    return NULL;
+} 
+
+//Close file. NULL handling. 
+void process_close_file(int fd){
+
+    struct thread *t = thread_current();
+    //If not NULL, call file_close
+    if(t->fdt[fd] != NULL)
+        file_close(t->fdt[fd]);
+    //Close file and input NULL in file discripter
+    t->fdt[fd] = NULL;
+}
+
+//fdt를 다루는 커널함수들
+
+/* Find child element that equal pid argument */
+struct thread *get_child_process (int pid) {
+    //Get current thread to cur
+    struct thread *cur = thread_current();
+    //Get head of child list to elem
+    struct list_elem *elem = list_begin(&cur->child_list);
+    //For store next element
+    struct list_elem *next;
+
+    //Find equal element
+    while (elem != list_end(&cur -> child_list)) {
+
+        //List entry
+        struct thread *cp = list_entry(elem, struct thread, child_elem);
+
+        //Save next list in next variable
+        next = list_next(elem); 
+
+        //If same child in child_list, return 
+        if (pid == cp->tid) {
+            return cp;
+        }
+        //Go to next child 
+        elem = next;
+    }
+    //No matching child
+    return NULL;
+
+}
+
+
+void remove_child_process (struct thread *cp) {
+
+    //remove child process
+    list_remove(&cp->child_elem);
+    //free memory
+    palloc_free_page(cp);
 }
 
 
@@ -777,7 +778,7 @@ bool handle_mm_fault (struct vm_entry *vme) {
             success = load_file(kaddr, vme);
             break;
         case VM_ANON:       
-            success = load_swap(kaddr, vme);
+            //success = load_swap(kaddr, vme);
             break;
     }
     if(!success) {

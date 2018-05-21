@@ -1,11 +1,19 @@
+#include <string.h>
+#include <stdbool.h>
+#include "filesys/file.h"
+#include "threads/interrupt.h"
+#include "threads/malloc.h"
+#include "threads/palloc.h"
+#include "threads/thread.h"
+#include "threads/vaddr.h"
+#include "userprog/pagedir.h"
+#include "userprog/process.h"
+#include "userprog/syscall.h"
+
+#include "vm/page.h"
 
 
-
-void vm_init (struct hash *vm) {
-    /* hash_init()으로 해시테이블 초기화 */
-    /* 인자로 해시테이블과 vm_hash_func과 vm_less_func 사용 */
-    hash_init (vm, vm_hash_func, vm_less_func, NULL);
-}
+bool insert_vme (struct hash *vm, struct vm_entry *vme);
 
 static unsigned vm_hash_func (const struct hash_elem *e, void *aux) {
 
@@ -31,10 +39,36 @@ static bool vm_less_func (const struct hash_elem *a,
     
     return false;
 }
+static void vm_destroy_func (struct hash_elem *e, void *aux UNUSED) {
+    
+    /* Get hash element (hash_entry() 사용) */
+    struct vm_entry *vme = hash_entry (e, struct vm_entry, elem);
+    
+    /* load가 되어있는 page의 vm_entry인 경우 */
+    if (vme->is_loaded) {
+      /* page의 할당 해제 및 page mapping 해제 */
+      /* (palloc_free_page()와pagedir_clear_page() 사용) */ 
+      palloc_free_page(pagedir_get_page (thread_current()->pagedir,
+                                         vme->vaddr)); 
+      pagedir_clear_page (thread_current()->pagedir, vme->vaddr); 
+    }
+
+    /* vm_entry객체 할당 해제*/
+    free (vme);
+}
+void vm_init (struct hash *vm) {
+    /* hash_init()으로 해시테이블 초기화 */
+    /* 인자로 해시테이블과 vm_hash_func과 vm_less_func 사용 */
+    hash_init (vm, vm_hash_func, vm_less_func, NULL);
+}
+
+
 
 bool insert_vme (struct hash *vm, struct vm_entry *vme) {
+    bool return_value = false;
     /* hash_insert() 함수 사용 */
-    hash_insert (vm, &vme->elem);
+    return_value = (hash_insert (vm, &vme->elem) == NULL);
+    return return_value;
 }
 
 bool delete_vme (struct hash *vm, struct vm_entry *vme) {
@@ -42,9 +76,9 @@ bool delete_vme (struct hash *vm, struct vm_entry *vme) {
     hash_delete (vm, &vme->elem);
 }
 
-struct vm_entry *find_vme (void *vaddr) {
+struct vm_entry* find_vme (void *vaddr) {
     
-    struct vm_entry = vme;
+    struct vm_entry vme;
     struct hash_elem *e;
 
     /* pg_round_down()으로 vaddr의 페이지번호를 얻음 */
@@ -63,23 +97,7 @@ void vm_destroy (struct hash *vm) {
     hash_destroy (vm, vm_destroy_func);
 }
 
-void vm_destroy_func (struct hash_elem *e, void *aux UNUSED) {
-    
-    /* Get hash element (hash_entry() 사용) */
-    struct vm_entry *vme = hash_entry (e, struct vm_entry, elem);
-    
-    /* load가 되어있는 page의 vm_entry인 경우 */
-    if (vme->is_loaded) {
-      /* page의 할당 해제 및 page mapping 해제 */
-      /* (palloc_free_page()와pagedir_clear_page() 사용) */ 
-      palloc_free_page(pagedir_get_page (thread_current()->pagedir,
-                                         vme->vaddr)); 
-      pagedir_clear_page (thread_current()->pagedir, vme->vaddr); 
-    }
 
-    /* vm_entry객체 할당 해제*/
-    free (vme);
-}
 
 bool load_file (void *kaddr, struct vm_entry *vme) {
     /*Using file_read_at()*/

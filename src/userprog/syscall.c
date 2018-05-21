@@ -4,11 +4,17 @@
 #include "threads/thread.h"
 #include <stdio.h>
 #include <syscall-nr.h>
+#include <list.h>
+#include <string.h>
 #include <devices/shutdown.h>
 #include <threads/thread.h>
 #include <filesys/filesys.h>
 #include <filesys/file.h>
 #include <devices/input.h>
+#include "vm/page.h"
+#include "userprog/pagedir.h"
+#include "threads/vaddr.h"
+
 
 static void syscall_handler (struct intr_frame *);
 struct vm_entry* check_address(void *addr, void* esp);
@@ -66,13 +72,15 @@ syscall_handler (struct intr_frame *f) {
         //CREATE
         case SYS_CREATE :
             get_argument(esp, arg, 2);
-            check_address((void *)arg[0]);
+            //check_address((void *)arg[0]);
+            check_valid_string((const void *) arg[0], f->esp);
             f->eax = create((const char *)arg[0], arg[1]);
             break;
         //REMOVE
         case SYS_REMOVE :
             get_argument(esp, arg, 1);
-            check_address((void *)arg[0]);
+            //check_address((void *)arg[0]);
+            check_valid_string((const void *) arg[0], f->esp);
             f->eax = remove((const char *)arg[0]);
             break;
         //OPEN
@@ -147,7 +155,7 @@ void get_argument(void *esp, int *arg, int count) {
 
     for (i=0; i<count; i++) {
         ptr = (int *)esp + i; //Copy to temp pointer       
-        check_address(esp+(i*4)); //Check address
+        check_address(esp+(i*4), esp); //Check address
         arg[i] = *ptr; //Copy to Kernel
     }
 

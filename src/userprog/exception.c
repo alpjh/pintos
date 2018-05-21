@@ -149,6 +149,7 @@ page_fault (struct intr_frame *f)
   write = (f->error_code & PF_W) != 0;
   user = (f->error_code & PF_U) != 0;
 
+  bool load = false;
   /* read only 페이지에 대한 접근이 아닐 경우 */
   //if writing read-only -> not_present = false
   if (!not_present)
