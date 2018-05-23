@@ -33,16 +33,13 @@ struct vm_entry{
     struct hash_elem elem; /*해시테이블Element */
 };
 
-//static bool install_page (void *upage, void *kpage, bool writable);
 
 void vm_init (struct hash *vm);
-struct vm_entry* find_vme(void* vaddr);
+struct vm_entry* find_vme(void *vaddr);
 bool insert_vme (struct hash *vm, struct vm_entry *vme);
-bool delete_vme(struct hash *vm, struct vm_entry *vme);
-void vm_destroy(struct hash *vm);
-
+bool delete_vme (struct hash *vm, struct vm_entry *vme);
+void vm_destroy (struct hash *vm);
 bool load_file(void* kaddr, struct vm_entry *vme);
-
 bool handle_mm_fault(struct vm_entry *vme); 
 
 #endif

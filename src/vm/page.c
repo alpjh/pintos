@@ -13,7 +13,12 @@
 #include "vm/page.h"
 
 
+void vm_init (struct hash *vm);
 bool insert_vme (struct hash *vm, struct vm_entry *vme);
+bool delete_vme (struct hash *vm, struct vm_entry *vme);
+struct vm_entry* find_vme (void *vaddr);
+void vm_destroy (struct hash *vm);
+bool load_file (void *kaddr, struct vm_entry *vme);
 
 static unsigned vm_hash_func (const struct hash_elem *e, void *aux) {
 

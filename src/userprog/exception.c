@@ -4,6 +4,7 @@
 #include "userprog/gdt.h"
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#include "vm/page.h"
 
 /* Number of page faults processed. */
 static long long page_fault_cnt;
@@ -159,19 +160,21 @@ page_fault (struct intr_frame *f)
   if (vme = find_vme (fault_addr)) {     
       /* vm_entry를 인자로 넘겨주며 handle_mm_fault() 호출 */
       load = handle_mm_fault(vme);
-  }
+  } else
+      exit(-1);
+      
 
   /* 제대로 파일이 물리메모리에 로드되고 맵핑됬는지 검사 */
-  if(!load) {
+  //if(!load) {
       /* To implement virtual memory, delete the rest of the function
          body, and replace it with code that brings in the page to
          which fault_addr refers. */
-      printf ("Page fault at %p: %s error %s page in %s context.\n",
+/*      printf ("Page fault at %p: %s error %s page in %s context.\n",
               fault_addr,
               not_present ? "not present" : "rights violation",
               write ? "writing" : "reading",
               user ? "user" : "kernel");
       kill (f);
-  }
+  }*/
 }
 

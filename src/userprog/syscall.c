@@ -345,12 +345,14 @@ void check_valid_buffer (void *buffer, unsigned size, void *esp,
 void check_valid_string (const void *str, void *esp) {
     /* str에 대한 vm_entry의 존재여부를 확인 */
     //if no vm_entry in str, check address return NULL
-    if (!check_address (str, esp))
-        return;
+    /*if (!check_address (str, esp))
+        return;*/
+    check_address (str, esp);
     /* check_address()사용 */
     //for all str. check address. 
     while (*(char *)str != 0) {
         //start from str 1. str0 did it up line. 
         str = (char *) str + 1;
         check_address(str, esp);
-    }}
+    }
+}

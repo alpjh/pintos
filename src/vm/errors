@@ -1,0 +1,42 @@
+../../userprog/exception.c: In function ‘page_fault’:
+../../userprog/exception.c:157:7: warning: implicit declaration of function ‘exit’
+../../userprog/exception.c:157:7: warning: incompatible implicit declaration of built-in function ‘exit’
+../../userprog/exception.c:160:3: warning: suggest parentheses around assignment used as truth value
+../../userprog/syscall.c: In function ‘syscall_handler’:
+../../userprog/syscall.c:64:13: warning: implicit declaration of function ‘check_valid_string’
+../../userprog/syscall.c:102:13: warning: implicit declaration of function ‘check_valid_buffer’
+../../userprog/syscall.c:113:13: warning: implicit declaration of function ‘write’
+../../userprog/syscall.c: In function ‘check_address’:
+../../userprog/syscall.c:144:5: warning: suggest parentheses around assignment used as truth value
+../../userprog/syscall.c:138:50: warning: unused parameter ‘esp’
+../../userprog/syscall.c: At top level:
+../../userprog/syscall.c:271:5: warning: no previous prototype for ‘write’
+../../userprog/syscall.c:324:6: warning: no previous prototype for ‘check_valid_buffer’
+../../userprog/syscall.c:324:6: warning: conflicting types for ‘check_valid_buffer’
+../../userprog/syscall.c:102:13: note: previous implicit declaration of ‘check_valid_buffer’ was here
+../../userprog/syscall.c: In function ‘check_valid_buffer’:
+../../userprog/syscall.c:332:12: warning: passing argument 1 of ‘check_address’ discards qualifiers from pointer target type
+../../userprog/syscall.c:138:18: note: expected ‘void *’ but argument is of type ‘const void *’
+../../userprog/syscall.c:326:14: warning: unused variable ‘i’
+../../userprog/syscall.c:324:49: warning: unused parameter ‘size’
+../../userprog/syscall.c: At top level:
+../../userprog/syscall.c:345:6: warning: no previous prototype for ‘check_valid_string’
+../../userprog/syscall.c:345:6: warning: conflicting types for ‘check_valid_string’
+../../userprog/syscall.c:64:13: note: previous implicit declaration of ‘check_valid_string’ was here
+../../userprog/syscall.c: In function ‘check_valid_string’:
+../../userprog/syscall.c:348:5: warning: passing argument 1 of ‘check_address’ discards qualifiers from pointer target type
+../../userprog/syscall.c:138:18: note: expected ‘void *’ but argument is of type ‘const void *’
+../../userprog/syscall.c:355:9: warning: passing argument 1 of ‘check_address’ discards qualifiers from pointer target type
+../../userprog/syscall.c:138:18: note: expected ‘void *’ but argument is of type ‘const void *’
+../../vm/page.c: In function ‘vm_hash_func’:
+../../vm/page.c:23:64: warning: unused parameter ‘aux’
+../../vm/page.c: In function ‘vm_init’:
+../../vm/page.c:67:5: warning: passing argument 3 of ‘hash_init’ from incompatible pointer type
+../../lib/kernel/hash.h:78:6: note: expected ‘_Bool (*)(const struct hash_elem *, const struct hash_elem *, void *)’ but argument is of type ‘_Bool (*)(const struct hash_elem *, const struct hash_elem *)’
+../../vm/page.c: In function ‘find_vme’:
+../../vm/page.c:92:5: warning: suggest parentheses around assignment used as truth value
+../../vm/page.c: In function ‘delete_vme’:
+../../vm/page.c:82:1: warning: control reaches end of non-void function
+ar: creating libc.a
+make[1]: *** [tests/userprog/args-none.output] Error 127
+make: *** [check] Error 2
