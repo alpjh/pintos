@@ -163,7 +163,11 @@ page_fault (struct intr_frame *f)
   }
   /* 페이지폴트가 일어난 주소에 대한 vm_entry 구조체 탐색 */
   struct vm_entry *vme;
-  if (vme = find_vme (fault_addr)) {     
+  if (vme = find_vme (fault_addr)) {    
+      
+      if (write && (vme->writable == 0))
+          exit (-1);
+  
       /* vm_entry를 인자로 넘겨주며 handle_mm_fault() 호출 */
       load = handle_mm_fault(vme);
   } else {

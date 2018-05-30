@@ -387,7 +387,7 @@ int mmap(int fd, void* addr) {
     struct thread* t = thread_current();
 
 	if (!f || !is_user_vaddr(addr) || addr == 0 || 
-            (uint32_t)addr % PGSIZE != 0 ) {
+            (uint32_t)addr % PGSIZE != 0 || addr < 0 ) {
 		return -1; //잘못된 인자
 	}
 	
