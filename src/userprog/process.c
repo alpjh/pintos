@@ -259,6 +259,7 @@ process_exit (void)
     }
 
 
+    //munmap(-1);
     //Free memory of file discripter
     palloc_free_page(cur->fdt);
     /////메모리누수 없이 파일디스크립터 테이블 해제
@@ -268,7 +269,7 @@ process_exit (void)
         file_close(cur->executing_file);
     }
 
-    //munmap(CLOSE_ALL);
+    munmap(-1);
     /* vm_entry들을 제거하는 함수 추가 */
     vm_destroy (&cur->vm);
 

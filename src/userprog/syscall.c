@@ -39,52 +39,6 @@ syscall_init (void) {
     lock_init(&filesys_lock);
 }
 
-/*
-
-//mmapid를 할당해줄 때 중간에 숫자가 비어있을 경우 ++하면서 그냥 할당할것인가 아니면 비어있는 숫자를 할당해줄 것인가의 문제가 존재함. 
-
-//mapid_t라는 유형은 없으므로 그냥 int 등 사용하면 됨..
-
-int mmap(int fd, void* addr){
-	struct file *f = process_get_fild(fd);
-	struct file *rf; //reopen할 파일
-	struct mmap_file *mf;
-	static int mapid = 0; //mmap시스템콜 안에서만 쓰이므로
-	//하지만 스레드 구조체 등 안에 있는게 좋을거같다고 하심..
-
-	
-	if (!f || !addr || (addr % 4096) || addr <0)
-	{
-		return -1; //잘못된 인자
-	}
-	
-	rf = file_reopen(f);
-	
-	mf = malloc(sizeof(struct mmap_file));
-	mf->map_id = mapid++;
-	mf->file = rf;
-	
-	while (파일 다 읽을 때까지) {
-		struct vm_entry *vme = malloc(sizeof(struct vm_entry));
-		//vme 내용들 초기화;
-		vme->file = rf;
-		vme->offset = 지금 읽은 만큼;
-		vme->read_bytes = min(남은만큼, 4096);
-		vme->zero_bytes = 4096 - read_bytes;
-
-		hash_insert(&thread_current()->vm);
-		list_insert(&mf->vme_list, &vme->mmap_elem);
-	}
-	
-	list_insert(&thread_current()->mmap_list, &mf->elem);
-	return mf->map_id;
-}
-
-*/
-
-
-
-
 static void
 syscall_handler (struct intr_frame *f) {
 
@@ -170,21 +124,33 @@ syscall_handler (struct intr_frame *f) {
             get_argument(esp , arg , 1);
             f -> eax = tell(arg[0]);
             break;
-        //CLOSE
+            //CLOSE
         case SYS_CLOSE :
             get_argument(esp , arg , 1);
             close(arg[0]);  
             break;
+        case SYS_MMAP:
+            get_argument(esp, arg, 2);
+            f->eax =mmap(arg[0], (void*)arg[1]);
+            break;
+        case SYS_MUNMAP:
+            get_argument(esp, arg, 1);
+            munmap(arg[0]);
+            break;
+
         //NOT SYSCALL
         default :
+            printf("\nnot syscall\n");
             exit(-1);
     }  
 }
 
 /* Check if address point user domain */
 struct vm_entry* check_address(void *addr, void *esp) {
-    if(!((void *)0x08048000 < addr && addr < (void *)0xc0000000)) // user domain
+    if(addr < (void *)0x08048000 || addr >= (void *)0xc0000000) {
+        // user domain
         exit(-1);
+    }
     /*addr이vm_entry에존재하면vm_entry를반환하도록코드작성*/
     /*find_vme() 사용*/
     struct vm_entry* vme;
@@ -402,4 +368,132 @@ void check_valid_string (const void *str, void *esp) {
         str = (char *) str + 1;
         check_address(str, esp);
     }
+}
+
+//mmapid를 할당해줄 때 중간에 숫자가 비어있을 경우 ++하면서 그냥 할당할것인가 아니면 비어있는 숫자를 할당해줄 것인가의 문제가 존재함. 
+
+//mapid_t라는 유형은 없으므로 그냥 int 등 사용하면 됨..
+
+int mmap(int fd, void* addr) {
+	
+    struct file *f = process_get_file(fd);
+	struct file *rf; //reopen할 파일
+	struct mmap_file *mf;
+	static int mapid = 0; //mmap시스템콜 안에서만 쓰이므로
+	//하지만 스레드 구조체 등 안에 있는게 좋을거같다고 하심..
+    int read_bytes;
+    int offset = 0;
+
+    struct thread* t = thread_current();
+
+	if (!f || !is_user_vaddr(addr) || addr == 0 || 
+            (uint32_t)addr % PGSIZE != 0 ) {
+		return -1; //잘못된 인자
+	}
+	
+	rf = file_reopen(f);
+    
+    if (!rf || file_length (rf) == 0)
+        return -1;
+
+	read_bytes = file_length(rf);
+
+	mf = malloc(sizeof(struct mmap_file));
+	mf->mapid = mapid++;
+    list_init(&mf->vme_list);
+	mf->file = rf;
+	
+	while (read_bytes > 0) {
+		struct vm_entry *vme;
+		uint32_t page_read_bytes = 
+                        read_bytes < PGSIZE ? read_bytes : PGSIZE;
+        uint32_t page_zero_bytes = PGSIZE - page_read_bytes;
+                        
+        vme = malloc(sizeof(struct vm_entry));
+        
+        //vme 내용들 초기화;
+		vme->type = VM_FILE;
+        vme->file = rf;
+		vme->offset = offset;
+		vme->read_bytes = page_read_bytes;
+		vme->zero_bytes = page_zero_bytes;
+        vme->writable = true;
+        vme->is_loaded = false;
+        vme->vaddr = addr;
+
+        list_push_back(&mf->vme_list, &vme->mmap_elem);
+        insert_vme (&t->vm, vme);
+
+        read_bytes -= page_read_bytes;
+        offset += page_read_bytes;
+        addr += PGSIZE;
+    }
+    
+    list_push_back (&t->mmap_list, &mf->elem);
+    return mf->mapid;
+}
+
+
+void do_munmap(struct mmap_file* mmap_file)
+{
+    //printf("\ndounmap\n");
+    struct list_elem *next, *e;
+    struct file *f = mmap_file->file;
+
+    struct thread* t = thread_current();
+
+    e = list_begin(&mmap_file->vme_list);   
+    while (e!=list_end(&mmap_file->vme_list)) {
+        next = list_next(e);
+
+        struct vm_entry *vme = list_entry(e, struct vm_entry, mmap_elem);
+
+        if(vme->is_loaded) {
+            if (pagedir_is_dirty(t->pagedir, vme->vaddr)) {
+                lock_acquire(&filesys_lock);
+                file_write_at(vme->file, vme->vaddr, 
+                              vme->read_bytes, vme->offset);
+                lock_release(&filesys_lock);
+            }
+
+            palloc_free_page(pagedir_get_page(t->pagedir, vme->vaddr));
+
+            pagedir_clear_page(t->pagedir, vme->vaddr);
+        }   
+
+        list_remove(&vme->mmap_elem);
+        delete_vme(&t->vm, vme);
+
+        free(vme);
+
+        e = next;
+    }
+    if (f) {
+        lock_acquire(&filesys_lock);
+        file_close(f);
+        lock_release(&filesys_lock);
+    }
+}
+
+void munmap(int mapid)
+{   
+    struct thread* t = thread_current();
+    struct list_elem *e = list_begin(&t->mmap_list);
+    struct list_elem *next;
+
+    while(e != list_end(&t->mmap_list)) {
+        struct mmap_file* mmap_file = list_entry(e, struct mmap_file, elem);
+        //printf("\nmunmap\n");
+        if (mmap_file->mapid == mapid || mapid == -1) {
+            //printf("\nbefore do_mun\n");
+            do_munmap(mmap_file);
+            list_remove(&mmap_file->elem);
+            free(mmap_file);
+            if(mapid != -1)
+                break;
+        }
+        //printf("\nbefore list_next\n");
+        e = list_next(&t->mmap_list);
+
+    }   
 }

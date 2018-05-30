@@ -142,8 +142,9 @@ struct thread
  
   /* 스레드가 가진 가상주소공간을 관리하는 해시테이블*/
   struct hash vm; 
-  
-};
+  struct list mmap_list;
+  int mapid;
+  };
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.

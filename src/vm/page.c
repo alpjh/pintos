@@ -94,6 +94,7 @@ struct vm_entry* find_vme (void *vaddr) {
         return hash_entry (e, struct vm_entry, elem);
     }
     /* 만약 존재하지 않는다면 NULL리턴 */
+    printf("pjh : no vme");
     return NULL;
 }
 
@@ -105,6 +106,8 @@ void vm_destroy (struct hash *vm) {
 
 
 bool load_file (void *kaddr, struct vm_entry *vme) {
+    
+    bool file_read_result = false;
     /*Using file_read_at()*/
 
     /* file_read_at으로물리페이지에read_bytes만큼데이터를씀*/
@@ -119,12 +122,13 @@ bool load_file (void *kaddr, struct vm_entry *vme) {
                                                 vme->read_bytes, 
                                                 vme->offset)) {
             lock_release(&filesys_lock);
-            return false;
+            return file_read_result;
         }
         lock_release(&filesys_lock);
         memset(kaddr + vme->read_bytes, 0, vme->zero_bytes);
     }
     else
         memset(kaddr, 0, PGSIZE);
-    return true;
+    file_read_result = true;
+    return file_read_result;
 }
