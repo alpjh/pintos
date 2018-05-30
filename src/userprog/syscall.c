@@ -404,13 +404,20 @@ int mmap(int fd, void* addr) {
 	mf->file = rf;
 	
 	while (read_bytes > 0) {
-		struct vm_entry *vme;
+        struct vm_entry *vme;
+        
+        if (find_vme(addr))
+            return -1;
+
 		uint32_t page_read_bytes = 
                         read_bytes < PGSIZE ? read_bytes : PGSIZE;
         uint32_t page_zero_bytes = PGSIZE - page_read_bytes;
                         
         vme = malloc(sizeof(struct vm_entry));
         
+        if(!vme)
+            return -1;
+
         //vme 내용들 초기화;
 		vme->type = VM_FILE;
         vme->file = rf;
