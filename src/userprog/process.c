@@ -268,6 +268,7 @@ process_exit (void)
         file_close(cur->executing_file);
     }
 
+    //munmap(CLOSE_ALL);
     /* vm_entry들을 제거하는 함수 추가 */
     vm_destroy (&cur->vm);
 
@@ -776,6 +777,7 @@ bool handle_mm_fault (struct vm_entry *vme) {
             success = load_file(kaddr, vme);
         case VM_FILE:       
             success = load_file(kaddr, vme);
+            /* VM_FILE시 데이터를 로드할 수 있도록 수정 */
             break;
         case VM_ANON:       
             //success = load_swap(kaddr, vme);

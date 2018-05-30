@@ -38,6 +38,53 @@ syscall_init (void) {
     intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
     lock_init(&filesys_lock);
 }
+
+/*
+
+//mmapid를 할당해줄 때 중간에 숫자가 비어있을 경우 ++하면서 그냥 할당할것인가 아니면 비어있는 숫자를 할당해줄 것인가의 문제가 존재함. 
+
+//mapid_t라는 유형은 없으므로 그냥 int 등 사용하면 됨..
+
+int mmap(int fd, void* addr){
+	struct file *f = process_get_fild(fd);
+	struct file *rf; //reopen할 파일
+	struct mmap_file *mf;
+	static int mapid = 0; //mmap시스템콜 안에서만 쓰이므로
+	//하지만 스레드 구조체 등 안에 있는게 좋을거같다고 하심..
+
+	
+	if (!f || !addr || (addr % 4096) || addr <0)
+	{
+		return -1; //잘못된 인자
+	}
+	
+	rf = file_reopen(f);
+	
+	mf = malloc(sizeof(struct mmap_file));
+	mf->map_id = mapid++;
+	mf->file = rf;
+	
+	while (파일 다 읽을 때까지) {
+		struct vm_entry *vme = malloc(sizeof(struct vm_entry));
+		//vme 내용들 초기화;
+		vme->file = rf;
+		vme->offset = 지금 읽은 만큼;
+		vme->read_bytes = min(남은만큼, 4096);
+		vme->zero_bytes = 4096 - read_bytes;
+
+		hash_insert(&thread_current()->vm);
+		list_insert(&mf->vme_list, &vme->mmap_elem);
+	}
+	
+	list_insert(&thread_current()->mmap_list, &mf->elem);
+	return mf->map_id;
+}
+
+*/
+
+
+
+
 static void
 syscall_handler (struct intr_frame *f) {
 

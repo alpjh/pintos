@@ -33,6 +33,13 @@ struct vm_entry{
     struct hash_elem elem; /*해시테이블Element */
 };
 
+struct mmap_file {
+    int mapid;
+    struct file* file;
+    struct list_elem elem;
+    struct list vme_list;
+};
+
 
 void vm_init (struct hash *vm);
 struct vm_entry* find_vme(void *vaddr);
