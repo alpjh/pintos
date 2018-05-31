@@ -41,6 +41,14 @@ struct mmap_file {
     struct list vme_list;
 };
 
+//swap. page struct
+struct page {
+    void *kaddr;
+    struct vm_entry *vme;
+    struct thread *thread;
+    struct list_elem lru;
+};
+
 
 void vm_init (struct hash *vm);
 struct vm_entry* find_vme(void *vaddr);
