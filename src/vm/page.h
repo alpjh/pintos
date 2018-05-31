@@ -33,6 +33,7 @@ struct vm_entry{
     struct hash_elem elem; /*해시테이블Element */
 };
 
+//mmap struct
 struct mmap_file {
     int mapid;
     struct file* file;

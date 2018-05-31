@@ -156,12 +156,13 @@ struct vm_entry* check_address(void *addr, void *esp) {
     struct vm_entry* vme;
     /*find_vme() 사용*/
     if (vme = find_vme((void*)addr)) {
+        //handle page fault
         handle_mm_fault(vme);
+        //handle fault and return vme
         return vme;
     }
+    //if no NULL, 
     return NULL; 
-    //exit (-1);
-    //return -1; pjh?
 }
 
 /* Copy Value in UserStack to Kernel */    
@@ -343,11 +344,13 @@ void check_valid_buffer (void *buffer, unsigned size, void *esp,
                          bool to_write) {
     unsigned i;
     char *local_buffer = (char *)buffer;
+    
     /* 인자로 받은 buffer부터 buffer + size까지의 크기가 한페이지의 
        크기를 넘을 수 도 있음 */
-    /* check_address를 이용해서 주소의 유저영역여부를 검사함과 동시에 
-       vm_entry구조체를 얻음 */
+    //Use for loop
     for (i=0; i<size; i++) {
+        /* check_address를 이용해서 주소의 유저영역여부를 검사함과 동시에 
+           vm_entry구조체를 얻음 */
         struct vm_entry *vme = check_address ((const void*)local_buffer, esp);
         /* 해당 주소에 대한 vm_entry 존재여부와 vm_entry의 writable멤버가
            true인지 검사 */
@@ -358,8 +361,6 @@ void check_valid_buffer (void *buffer, unsigned size, void *esp,
         }
         local_buffer++;
     }
-    /* 위 내용을 buffer부터 buffer + size까지의 주소에 포함되는
-       vm_entry들에 대해 적용 */
 }
 
 void check_valid_string (const void *str, void *esp) {
@@ -386,8 +387,8 @@ int mmap(int fd, void* addr) {
     struct file *f = process_get_file(fd);
 	struct file *rf; //reopen할 파일
 	struct mmap_file *mf;
-	static int mapid = 0; //mmap시스템콜 안에서만 쓰이므로
-	//하지만 스레드 구조체 등 안에 있는게 좋을거같다고 하심..
+	static int mapid = 0; //mmap시스템콜 안에서만 쓰이
+    
     int read_bytes;
     int offset = 0;
 
@@ -413,6 +414,7 @@ int mmap(int fd, void* addr) {
 	while (read_bytes > 0) {
         struct vm_entry *vme;
         
+        //if already exist, return error
         if (find_vme(addr))
             return -1;
 
@@ -422,6 +424,7 @@ int mmap(int fd, void* addr) {
                         
         vme = malloc(sizeof(struct vm_entry));
         
+        //if no memory, return error
         if(!vme)
             return -1;
 
@@ -435,46 +438,55 @@ int mmap(int fd, void* addr) {
         vme->is_loaded = false;
         vme->vaddr = addr;
 
+        //input mmap elem to vme list 
         list_push_back(&mf->vme_list, &vme->mmap_elem);
+        //insert vme to thread
         insert_vme (&t->vm, vme);
 
+        //control values
         read_bytes -= page_read_bytes;
         offset += page_read_bytes;
         addr += PGSIZE;
     }
     
+    //push element to mmaplist 
     list_push_back (&t->mmap_list, &mf->elem);
     return mf->mapid;
 }
 
-
-void do_munmap(struct mmap_file* mmap_file)
-{
-    //printf("\ndounmap\n");
+//Deleted mmap
+void do_munmap (struct mmap_file* mmap_file) {
+    
+    struct thread* t = thread_current();
     struct list_elem *next, *e;
+    
     struct file *f = mmap_file->file;
 
-    struct thread* t = thread_current();
-
+    //e = first elem of vme_list
     e = list_begin(&mmap_file->vme_list);   
+    //remove, find circular
+    
+    //for list's end 
     while (e!=list_end(&mmap_file->vme_list)) {
         next = list_next(e);
 
         struct vm_entry *vme = list_entry(e, struct vm_entry, mmap_elem);
 
+        //if loaded vme? 
         if(vme->is_loaded) {
+            //Look dirty or not 
             if (pagedir_is_dirty(t->pagedir, vme->vaddr)) {
                 lock_acquire(&filesys_lock);
                 file_write_at(vme->file, vme->vaddr, 
                               vme->read_bytes, vme->offset);
                 lock_release(&filesys_lock);
             }
-
+            //Free Page
             palloc_free_page(pagedir_get_page(t->pagedir, vme->vaddr));
-
             pagedir_clear_page(t->pagedir, vme->vaddr);
         }   
 
+        //remove element at list
         list_remove(&vme->mmap_elem);
         delete_vme(&t->vm, vme);
 
@@ -483,6 +495,7 @@ void do_munmap(struct mmap_file* mmap_file)
         e = next;
     }
     if (f) {
+        //If file exist , close file.
         lock_acquire(&filesys_lock);
         file_close(f);
         lock_release(&filesys_lock);
@@ -496,12 +509,15 @@ void munmap(int mapid)
     struct list_elem *next;
 
     while(e != list_end(&t->mmap_list)) {
+        
         struct mmap_file* mmap_file = list_entry(e, struct mmap_file, elem);
-        //printf("\nmunmap\n");
+
+        //choice mmapfile and delete, if -1 -> close all mmap
         if (mmap_file->mapid == mapid || mapid == -1) {
-            //printf("\nbefore do_mun\n");
+            // unmap corresponding file 
             do_munmap(mmap_file);
             list_remove(&mmap_file->elem);
+            //free memory
             free(mmap_file);
             if(mapid != -1)
                 break;

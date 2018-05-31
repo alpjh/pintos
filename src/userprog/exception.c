@@ -152,7 +152,7 @@ page_fault (struct intr_frame *f)
 
   bool load = false;
   /* read only 페이지에 대한 접근이 아닐 경우 */
-  //if writing read-only -> not_present = false
+  // No Kernel. Only user 
   if (!user) {
       /*printf ("Page fault at %p: %s error %s page in %s context.\n",
               fault_addr,
@@ -161,8 +161,9 @@ page_fault (struct intr_frame *f)
               user ? "user" : "kernel");*/
       exit(-1);
   }
+
+  //if writing read-only -> not_present = false
   if (!not_present) {
-//      printf("\npjh : not present\n");
       exit(-1);
   }
   /* 페이지폴트가 일어난 주소에 대한 vm_entry 구조체 탐색 */
@@ -170,14 +171,12 @@ page_fault (struct intr_frame *f)
   if (vme = find_vme (fault_addr)) {    
       
       if (write && (vme->writable == 0)) {
-  //        printf("\npjh : write\n");
           exit (-1);
       }
   
       /* vm_entry를 인자로 넘겨주며 handle_mm_fault() 호출 */
       load = handle_mm_fault(vme);
   } else {
-  //    printf("\npjh : no vme\n");
       exit(-1);
   }
 }

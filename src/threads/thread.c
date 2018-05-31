@@ -537,6 +537,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->wait_on_lock = NULL;
   list_init (&t->donations);
 
+  //Init mmap list
   list_init(&t->mmap_list);
 }
 
