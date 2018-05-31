@@ -57,6 +57,7 @@ syscall_handler (struct intr_frame *f) {
         case SYS_EXIT :
             get_argument(esp, arg, 1);
             exit(arg[0]);
+            f->eax = arg[0];
             break;
         //EXEC
         case SYS_EXEC :
@@ -152,11 +153,15 @@ struct vm_entry* check_address(void *addr, void *esp) {
         exit(-1);
     }
     /*addr이vm_entry에존재하면vm_entry를반환하도록코드작성*/
-    /*find_vme() 사용*/
     struct vm_entry* vme;
-    if (vme = find_vme((void*)addr))
+    /*find_vme() 사용*/
+    if (vme = find_vme((void*)addr)) {
+        handle_mm_fault(vme);
         return vme;
-    return NULL;
+    }
+    return NULL; 
+    //exit (-1);
+    //return -1; pjh?
 }
 
 /* Copy Value in UserStack to Kernel */    
@@ -342,15 +347,17 @@ void check_valid_buffer (void *buffer, unsigned size, void *esp,
        크기를 넘을 수 도 있음 */
     /* check_address를 이용해서 주소의 유저영역여부를 검사함과 동시에 
        vm_entry구조체를 얻음 */
-    struct vm_entry *vme = check_address ((const void*)local_buffer, esp);
-    /* 해당 주소에 대한 vm_entry 존재여부와 vm_entry의 writable멤버가
-       true인지 검사 */
-    if (vme && to_write) {
-        if (!vme->writable) {
-            exit(-1);
+    for (i=0; i<size; i++) {
+        struct vm_entry *vme = check_address ((const void*)local_buffer, esp);
+        /* 해당 주소에 대한 vm_entry 존재여부와 vm_entry의 writable멤버가
+           true인지 검사 */
+        if (vme && to_write) {
+            if (!vme->writable) {
+                exit(-1);
+            }
         }
+        local_buffer++;
     }
-    local_buffer++;
     /* 위 내용을 buffer부터 buffer + size까지의 주소에 포함되는
        vm_entry들에 대해 적용 */
 }

@@ -111,8 +111,6 @@ bool load_file (void *kaddr, struct vm_entry *vme) {
 
     /* file_read_at으로물리페이지에read_bytes만큼데이터를씀*/
     /* file_read_at여부반환*/
-    /* zero_bytes만큼남는부분을‘0’으로패딩*/
-    /*정상적으로file을메모리에loading 하면true 리턴*/
     if (vme->read_bytes > 0) {
         if ((int)vme->read_bytes != file_read_at(vme->file, 
                                                 kaddr, 
@@ -122,8 +120,10 @@ bool load_file (void *kaddr, struct vm_entry *vme) {
         }
         memset(kaddr + vme->read_bytes, 0, vme->zero_bytes);
     }
+    /* zero_bytes만큼남는부분을‘0’으로패딩*/
     else
         memset(kaddr, 0, PGSIZE);
+    /*정상적으로file을메모리에loading 하면true 리턴*/
     file_read_result = true;
     return file_read_result;
 }

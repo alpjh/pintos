@@ -154,24 +154,30 @@ page_fault (struct intr_frame *f)
   /* read only 페이지에 대한 접근이 아닐 경우 */
   //if writing read-only -> not_present = false
   if (!user) {
-      //printf("\npjh : not user\n");
+      /*printf ("Page fault at %p: %s error %s page in %s context.\n",
+              fault_addr,
+              not_present ? "not present" : "rights violation",
+              write ? "writing" : "reading",
+              user ? "user" : "kernel");*/
       exit(-1);
   }
   if (!not_present) {
-      //printf("\npjh : not present\n");
+//      printf("\npjh : not present\n");
       exit(-1);
   }
   /* 페이지폴트가 일어난 주소에 대한 vm_entry 구조체 탐색 */
   struct vm_entry *vme;
   if (vme = find_vme (fault_addr)) {    
       
-      if (write && (vme->writable == 0))
+      if (write && (vme->writable == 0)) {
+  //        printf("\npjh : write\n");
           exit (-1);
+      }
   
       /* vm_entry를 인자로 넘겨주며 handle_mm_fault() 호출 */
       load = handle_mm_fault(vme);
   } else {
-//      printf("\npjh : no vme\n");
+  //    printf("\npjh : no vme\n");
       exit(-1);
   }
 }
