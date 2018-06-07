@@ -20,6 +20,16 @@ struct inode_disk
     uint32_t unused[125];               /* Not used. */
   };
 
+/*
+struct sector_location{
+	int directness;
+	block_t index1;
+	block_t index2;
+}
+//인자의 블록 인덱싱 정보를 주고 받기 위해 선언해준 구조체
+
+*/
+
 /* Returns the number of sectors to allocate for an inode SIZE
    bytes long. */
 static inline size_t
