@@ -28,6 +28,23 @@ bytes_to_sectors (off_t size)
   return DIV_ROUND_UP (size, BLOCK_SECTOR_SIZE);
 }
 
+/*
+inode_update_file_length(){
+	//얼마나 늘어나야하는지 알아야함 (블록 몇개를 할당해야하는가?)
+	
+	//아래서부터는 블록 단위로 진행되어야한다.
+	//블록할당(free_map_allocate())
+	//블록인덱싱 정보를 어떻게 추가해야 할 것인가? (locate_byte())
+	//direct? indirect? double indirect?
+
+	//on disk inode 읽어와야함(get_disk_inode())
+	//블록 인덱싱 추가
+	//return;
+}
+
+*/
+
+
 
 /* In-memory inode. */
 struct inode 
