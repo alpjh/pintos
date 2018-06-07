@@ -55,6 +55,29 @@ inode_update_file_length(){
 */
 
 
+/*
+free_inode_sectors(on_disk_inode){
+	dib = bc_read(on_disk_inode.double_ind_block);
+	while(*){
+		ib = bc_read(ib[i++]);
+		while(*){
+			db = bc_read(ib[j++]);
+			free_map_release(db);
+		}
+	}
+	ib = bc_read(on_disk_inode.ind_block);
+	while(*){
+		db = bc_read(ib[i++]);
+		free_map_release(db);
+	}
+	while(*){
+		on_disk_inode.direct_map>table[i++];
+		free_map_release(db);
+	}
+}
+
+*/
+
 
 /* In-memory inode. */
 struct inode 
