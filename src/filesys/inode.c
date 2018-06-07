@@ -28,21 +28,6 @@ bytes_to_sectors (off_t size)
   return DIV_ROUND_UP (size, BLOCK_SECTOR_SIZE);
 }
 
-/*
-<byte_to_sectors 함수>
-
-//direck block인 경우
-//inode->direct_map_table[];
-
-//indirect block인 경우
-//inode->indirect_block 읽어오고, indirect_map[];에서 인덱스만큼 갖고옴
-
-//double인 경우
-//inode->double_indirect_block 읽어오고, double_indirect_map[?];에서 인덱스만큼 갖고온다.
-//그리고 한번 더 indirect_block 읽어오고, indirect_map[?];
-
-*/
-
 
 /* In-memory inode. */
 struct inode 
@@ -68,6 +53,22 @@ byte_to_sector (const struct inode *inode, off_t pos)
   else
     return -1;
 }
+
+/*
+<byte_to_sectori 함수>
+
+//direck block인 경우
+//inode->direct_map_table[];
+
+//indirect block인 경우
+//inode->indirect_block 읽어오고, indirect_map[];에서 인덱스만큼 갖고옴
+
+//double인 경우
+//inode->double_indirect_block 읽어오고, double_indirect_map[?];에서 인덱스만큼 갖고온다.
+//그리고 한번 더 indirect_block 읽어오고, indirect_map[?];
+
+*/
+
 
 /* List of open inodes, so that opening a single inode twice
    returns the same `struct inode'. */
