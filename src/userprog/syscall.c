@@ -120,7 +120,7 @@ syscall_handler (struct intr_frame *f) {
             get_argument(esp , arg , 2);
             seek(arg[0] , (unsigned) arg[1]);
             break;
-        //TELL
+            //TELL
         case SYS_TELL :
             get_argument(esp , arg , 1);
             f -> eax = tell(arg[0]);
@@ -138,10 +138,8 @@ syscall_handler (struct intr_frame *f) {
             get_argument(esp, arg, 1);
             munmap(arg[0]);
             break;
-
         //NOT SYSCALL
         default :
-            printf("\nnot syscall\n");
             exit(-1);
     }  
 }
@@ -290,17 +288,16 @@ int read(int fd, void *buffer, unsigned size){
 int write (int fd, void *buffer, unsigned size) {
 
     //Lock acquire
-    lock_acquire(&filesys_lock);
     if (fd == 1) {
         putbuf(buffer,size); //파일디스크립터가 1일 경우 버퍼에 저장된 갑승ㄹ 화면에 출력하고 버퍼의 크기를 리턴
         //Lock release
-        lock_release(&filesys_lock);
         return size;
     }
 
-    //lock_acquire(&filesys_lock);
+    lock_acquire(&filesys_lock);
+   //lock_acquire(&filesys_lock);
     struct file *f;
-    
+
     //Get file, if NULL, retuen -1 
     if (!(f = process_get_file(fd))) {
         //Lock release
@@ -317,6 +314,7 @@ int write (int fd, void *buffer, unsigned size) {
 }
 
 void seek (int fd, unsigned position) {
+    lock_acquire(&filesys_lock);
     struct file *f = process_get_file(fd);
 
     if(!f){
@@ -324,6 +322,7 @@ void seek (int fd, unsigned position) {
     }
 
     file_seek(f, position); //열린 파일의 위치를 position만큼 이동
+    lock_release(&filesys_lock);
 }
 
 unsigned tell (int fd) {
@@ -509,7 +508,7 @@ void munmap(int mapid)
     struct list_elem *next;
 
     while(e != list_end(&t->mmap_list)) {
-        
+
         struct mmap_file* mmap_file = list_entry(e, struct mmap_file, elem);
 
         //choice mmapfile and delete, if -1 -> close all mmap
@@ -527,3 +526,4 @@ void munmap(int mapid)
 
     }   
 }
+
