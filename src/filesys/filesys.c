@@ -52,7 +52,7 @@ filesys_done (void)
    Returns true if successful, false otherwise.
    Fails if a file named NAME already exists,
    or if internal memory allocation fails. */
-bool
+bool //root 디렉터리에 파일생성을 name경로에 파일생성하도록 변경
 filesys_create (const char *name, off_t initial_size) 
 {
   block_sector_t inode_sector = 0;
@@ -79,12 +79,16 @@ filesys_create (const char *name, off_t initial_size)
 
   lock_acquire (&file_sys_lock);
 
+  /* inode의is_dir값설정*/
+  /* 추가되는디렉터리엔트리의이름을file_name으로수정*/
   bool success = (dir != NULL
           && free_map_allocate (1, &inode_sector)
           && inode_create (inode_sector, initial_size, 0)
           && dir_add (dir, file_name, inode_sector));
+
   if (!success && inode_sector != 0) 
       free_map_release (inode_sector, 1);
+
   dir_close (dir);
 
   lock_release(&file_sys_lock);
@@ -220,8 +224,7 @@ do_format (void)
 
 
 
-
-
+//Root디렉터리에 파일생성을 name경로에 파일 생성하도록 변경
 bool filesys_create_dir(const char *name) {
     block_sector_t inode_sector = 0;
 
@@ -237,18 +240,18 @@ bool filesys_create_dir(const char *name) {
     dir = parse_path(cp_name, file_name);
     free(cp_name);
 
-    if (dir == NULL) /* if invalid path, return false */
-    {
+    if (!dir)
         return false;
-    }
 
-    /* make sure parent directory is not about to be removed */
     if (inode_is_removed(dir_get_inode(dir)))
-    {
         return NULL;
-    }
 
     struct dir *newDir = NULL;
+ 
+    /* bitmap에서 inode sector 번호 할당 */
+    /* 할당받은 sector에 file_name의 디렉터리 생성 */
+    /* 디렉터리 엔트리에 file_name의 엔트리추가 */
+    /* 디렉터리 엔트리에 ‘.’, ‘..’ 파일의 엔트리 추가 */
     bool success = (dir != NULL
             && free_map_allocate (1, &inode_sector)
             && dir_create (inode_sector, 16)
@@ -256,13 +259,14 @@ bool filesys_create_dir(const char *name) {
             && (newDir = dir_open (inode_open (inode_sector)))
             && dir_add (newDir, ".", inode_sector)
             && dir_add (newDir, "..", inode_get_inumber (dir_get_inode (dir))));
-    if (!success && inode_sector != 0)
+   if (!success && inode_sector != 0)
         free_map_release (inode_sector, 1);
     dir_close (dir);
     dir_close (newDir);
 
     return success;
 }
+
 struct dir* parse_path (char *path_name, char *file_name) {
     
     struct dir *dir;
@@ -287,7 +291,6 @@ struct dir* parse_path (char *path_name, char *file_name) {
 
 
     while (token != NULL && nextToken != NULL) {
-        /* attempt to open directory specified by token */
         struct inode *inode;
         bool success;
         /* dir에서 token이름의 파일을 검색하여 inode의 정보를 저장*/
@@ -310,7 +313,7 @@ struct dir* parse_path (char *path_name, char *file_name) {
         nextToken = strtok_r (NULL, "/", &savePtr);
     }
 
-    if (token == NULL)
+    if (!token)
         token = ".";
 
     /* token의 파일이름을 file_name에 저장 */
