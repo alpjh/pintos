@@ -71,11 +71,9 @@ filesys_create (const char *name, off_t initial_size)
   free (cp_name);
 
   if (!dir) {
-      //printf("create_dir_ parse error");
       return false;
   }
   if (inode_is_removed(dir_get_inode(dir))) {
-      //printf("create_dir error, inode is removed\n");
       return NULL;
   }
 
@@ -113,11 +111,9 @@ filesys_open (const char *name)
   free(cp_name);
 
   if (!dir) {
-      //printf("filesys_open error, parse\n");
       return false;
   }
   if (inode_is_removed(dir_get_inode(dir))) {
-      //printf("filesys_open error, inode removed\n");
       return NULL;
   }
   
@@ -243,14 +239,12 @@ bool filesys_create_dir(const char *name) {
 
     if (dir == NULL) /* if invalid path, return false */
     {
-        //printf("filesys_create_dir error, parse\n");
         return false;
     }
 
     /* make sure parent directory is not about to be removed */
     if (inode_is_removed(dir_get_inode(dir)))
     {
-        //printf("filesys_create_dir error, inode to be removed\n");
         return NULL;
     }
 
