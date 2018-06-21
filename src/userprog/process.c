@@ -273,7 +273,8 @@ process_exit (void)
 
     /* vm_entry들을 제거하는 함수 추가 */
     vm_destroy (&cur->vm);
-
+    /* 스래드의 현재작업디렉터리의 디렉터리 정보를 메모리에서 해지 */
+    dir_close (cur->cur_dir);
     /* Destroy the current process's page directory and switch back
        to the kernel-only page directory. */
     pd = cur->pagedir;

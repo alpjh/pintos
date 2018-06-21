@@ -33,6 +33,12 @@ void seek (int fd, unsigned position);
 unsigned tell (int fd);
 void close (int fd);
 
+bool sys_chdir(const char *dir);
+bool sys_mkdir(const char *dir);
+bool sys_readdir(int fd, char *name);
+bool sys_isdir(int fd);
+int sys_inumber(int fd);
+
 void
 syscall_init (void) {
     intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
@@ -137,6 +143,33 @@ syscall_handler (struct intr_frame *f) {
         case SYS_MUNMAP:
             get_argument(esp, arg, 1);
             munmap(arg[0]);
+            break;
+        case SYS_CHDIR:
+            get_argument(esp , arg , 1);
+            check_address(arg[0], esp);
+            f -> eax = sys_chdir((const char *)arg[0]);
+            break;
+
+        case SYS_MKDIR:
+            get_argument(esp , arg , 1);
+            check_address(arg[0], esp);
+            f -> eax = sys_mkdir((const char *)arg[0]);
+            break;
+
+        case SYS_READDIR:
+            get_argument(esp , arg , 2);
+            check_address(arg[1], esp);
+            f -> eax = sys_readdir(arg[0], (char *)arg[1]);
+            break;
+
+        case SYS_ISDIR:
+            get_argument(esp , arg , 1);
+            f -> eax = sys_isdir(arg[0]);
+            break;
+
+        case SYS_INUMBER:
+            get_argument(esp , arg , 1);
+            f -> eax = sys_inumber(arg[0]);
             break;
         //NOT SYSCALL
         default :
@@ -301,6 +334,10 @@ int write (int fd, void *buffer, unsigned size) {
     //Get file, if NULL, retuen -1 
     if (!(f = process_get_file(fd))) {
         //Lock release
+        lock_release(&filesys_lock);
+        return -1;
+    }
+    if (inode_is_dir (file_get_inode(f))) {
         lock_release(&filesys_lock);
         return -1;
     }
@@ -527,3 +564,68 @@ void munmap(int mapid)
     }   
 }
 
+
+bool sys_chdir (const char *dir) {
+    struct file *p_file = filesys_open(dir);
+    if(p_file == NULL)
+        return false;
+
+    struct inode *p_inode = inode_reopen(file_get_inode(p_file));
+    struct dir *p_cur_dir = dir_open(p_inode);
+
+    file_close(p_file);
+    if(p_cur_dir == NULL)
+        return false;
+
+    dir_close(thread_current()->cur_dir);
+    thread_current()->cur_dir = p_cur_dir;
+    return true;
+}
+
+bool sys_mkdir(const char *dir)
+{
+    return filesys_create_dir(dir);
+}
+
+bool sys_readdir(int fd, char *name)
+{
+    lock_acquire(&filesys_lock);
+    struct file *p_file = process_get_file(fd);
+    if(p_file == NULL && !inode_is_dir(file_get_inode(p_file)))
+    {
+        lock_release(&filesys_lock);
+        return false; 
+    }
+
+    struct dir *p_dir = (struct dir*)p_file;
+
+    bool success = false;
+    do
+    {
+        success = dir_readdir(p_dir, name);
+    }
+    while(success && (strcmp(name,".") == 0 || strcmp(name,"..") == 0));
+
+    lock_release(&filesys_lock);
+    return success;
+}
+
+bool sys_isdir(int fd)
+{   
+    struct file *p_file = process_get_file(fd);
+
+    if(p_file != NULL)
+        return inode_is_dir(file_get_inode(p_file));
+    else
+        return false;
+
+}
+
+int sys_inumber(int fd)
+{
+    struct file *p_file = process_get_file(fd);
+    if(p_file != NULL)
+        return (uint32_t)inode_get_inumber(file_get_inode(p_file));
+    else
+        return -1;
+}

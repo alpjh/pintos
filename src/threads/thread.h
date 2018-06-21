@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include "synch.h"
 #include <hash.h>
+#include "filesys/directory.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -104,6 +105,7 @@ struct thread
     uint32_t *pagedir;                  /* Page directory. */
 #endif
 
+    struct dir *cur_dir;
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
 
