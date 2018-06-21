@@ -33,11 +33,11 @@ void seek (int fd, unsigned position);
 unsigned tell (int fd);
 void close (int fd);
 
+bool sys_isdir(int fd);
 bool sys_chdir(const char *dir);
 bool sys_mkdir(const char *dir);
-bool sys_readdir(int fd, char *name);
-bool sys_isdir(int fd);
 int sys_inumber(int fd);
+bool sys_readdir(int fd, char *name);
 
 void
 syscall_init (void) {
@@ -538,8 +538,7 @@ void do_munmap (struct mmap_file* mmap_file) {
     }
 }
 
-void munmap(int mapid)
-{   
+void munmap (int mapid) {   
     struct thread* t = thread_current();
     struct list_elem *e = list_begin(&t->mmap_list);
     struct list_elem *next;
@@ -564,68 +563,78 @@ void munmap(int mapid)
     }   
 }
 
+bool sys_isdir(int fd) {   
+    struct file *p;
 
-bool sys_chdir (const char *dir) {
-    struct file *p_file = filesys_open(dir);
-    if(p_file == NULL)
+    if (p = process_get_file(fd))
+        return inode_is_dir(file_get_inode(p));
+    else
         return false;
 
-    struct inode *p_inode = inode_reopen(file_get_inode(p_file));
-    struct dir *p_cur_dir = dir_open(p_inode);
+}
+bool sys_chdir (const char *dir) {
+    struct file *p;
 
-    file_close(p_file);
-    if(p_cur_dir == NULL)
+    if(!(p = filesys_open(dir)))
+        return false;
+
+    /* dir경로를 분석하여 디렉터리를 반환 */
+    struct inode *inode = inode_reopen(file_get_inode(p));
+    struct dir *p_dir = dir_open(inode);
+
+    file_close(p);
+
+    if(!p_dir)
         return false;
 
     dir_close(thread_current()->cur_dir);
-    thread_current()->cur_dir = p_cur_dir;
+    /* 스레드의 현재 작업 디렉터리를 변경 */
+    thread_current()->cur_dir = p_dir;
     return true;
 }
 
-bool sys_mkdir(const char *dir)
-{
-    return filesys_create_dir(dir);
+bool sys_mkdir(const char *dir) {
+    return filesys_create_dir (dir);
 }
 
-bool sys_readdir(int fd, char *name)
-{
+
+int sys_inumber (int fd) {
+    struct file *p;
+    //fd리스트에서 fd에 대한 file정보를 얻어옴
+    if(p = process_get_file(fd)) //fd의 on-disk inode블록주소를 반환
+        return (uint32_t)inode_get_inumber(file_get_inode(p));
+    else
+        return -1;
+}
+
+//dir->pos엔트리를 읽어 name에 파일이름 저장
+bool sys_readdir(int fd, char *name) {
+    
+    //need lock
     lock_acquire(&filesys_lock);
-    struct file *p_file = process_get_file(fd);
-    if(p_file == NULL && !inode_is_dir(file_get_inode(p_file)))
-    {
+
+    /* fd리스트에서 fd에대한 file정보를 얻어옴 */
+    struct file *p = process_get_file(fd);
+    /* fd의 file->inode가 디렉터리인지 검사 */
+    if (!p && !inode_is_dir(file_get_inode(p))) {
         lock_release(&filesys_lock);
         return false; 
     }
 
-    struct dir *p_dir = (struct dir*)p_file;
+    /* p_file을 dir자료구조로 포인팅 */
+    struct dir *p_dir = (struct dir*)p;
 
     bool success = false;
-    do
-    {
+
+    do {
         success = dir_readdir(p_dir, name);
-    }
-    while(success && (strcmp(name,".") == 0 || strcmp(name,"..") == 0));
+    }/* 디렉터리의엔트에서 “.”, ”..” 이름을 제외한 파일이름을 name에 저장 */
+    while (success && 
+           (strcmp(name,".") == 0 || strcmp(name,"..") == 0));
 
     lock_release(&filesys_lock);
     return success;
 }
 
-bool sys_isdir(int fd)
-{   
-    struct file *p_file = process_get_file(fd);
 
-    if(p_file != NULL)
-        return inode_is_dir(file_get_inode(p_file));
-    else
-        return false;
 
-}
-
-int sys_inumber(int fd)
-{
-    struct file *p_file = process_get_file(fd);
-    if(p_file != NULL)
-        return (uint32_t)inode_get_inumber(file_get_inode(p_file));
-    else
-        return -1;
-}
