@@ -103,7 +103,7 @@ inode_init (void)
    Returns true if successful.
    Returns false if memory or disk allocation fails. */
 bool
-inode_create (block_sector_t sector, off_t length)
+inode_create (block_sector_t sector, off_t length, uint32_t is_dir)
 {
   struct inode_disk *disk_inode = NULL;
   bool success = false;
@@ -120,6 +120,10 @@ inode_create (block_sector_t sector, off_t length)
       size_t sectors = bytes_to_sectors (length);
       disk_inode->length = length;
       disk_inode->magic = INODE_MAGIC;
+      /* inode생성시, structinode_disk에추가한파일,
+         디렉터리 구분을 위한 필드를 is_dir 인자값으로 설정 */
+      disk_inode->is_dir = is_dir;
+
       if(length > 0)
           /* length 만큼의디스크블록을inode_updafe_file_length()를
              호출하여할당*/
@@ -143,6 +147,8 @@ inode_open (block_sector_t sector)
 {
   struct list_elem *e;
   struct inode *inode;
+
+  /* open_inodes리스트에inode가존재하는지검사*/
 
   /* Check whether this inode is already open. */
   for (e = list_begin (&open_inodes); e != list_end (&open_inodes);
@@ -411,6 +417,7 @@ inode_length (const struct inode *inode)
     return result;
 }
 
+//read disk inode at buffer
 bool get_disk_inode (const struct inode *inode, 
                             struct inode_disk* inode_disk) {
     /* inode->sector에해당하는on-disk inode를buffer cache에서
@@ -420,6 +427,7 @@ bool get_disk_inode (const struct inode *inode,
     return true;
 }
 
+//
 void locate_byte (off_t pos, struct sector_location *sec_loc) {
     off_t pos_sector = pos / BLOCK_SECTOR_SIZE;
     
@@ -440,9 +448,11 @@ void locate_byte (off_t pos, struct sector_location *sec_loc) {
                 INDIRECT_BLOCK_ENTRIES * (INDIRECT_BLOCK_ENTRIES + 1))) {
         //sec_loc자료구조의변수값업데이트(구현)
         sec_loc->directness = DOUBLE_INDIRECT;
+        //update pos_sector
         pos_sector = pos_sector 
                      - DIRECT_BLOCK_ENTRIES
                      - INDIRECT_BLOCK_ENTRIES;
+        //update sec_loc->index
         sec_loc->index1 = pos_sector / INDIRECT_BLOCK_ENTRIES;
         sec_loc->index2 = pos_sector % INDIRECT_BLOCK_ENTRIES;
     }
@@ -462,6 +472,7 @@ bool register_sector (struct inode_disk *inode_disk,
         block_sector_t new_sector, 
         struct sector_location sec_loc) {
 
+    //If no disk inode
     if (!inode_disk) {
         printf("\nNULL inode_disk!\n");
         return false;
@@ -470,16 +481,22 @@ bool register_sector (struct inode_disk *inode_disk,
     struct inode_indirect_block *new_block = NULL;
     block_sector_t index_2nd_block;
 
+    //Switch case directness
     switch (sec_loc.directness) {
+
         case NORMAL_DIRECT:
             /* inode_disk에새로할당받은디스크번호업데이트*/
             inode_disk->direct_map_table[sec_loc.index1] = new_sector;
             break;
+        
         case INDIRECT:
             new_block = malloc (BLOCK_SECTOR_SIZE);
+            //If no memory
             if (!new_block) 
                 return false;
+            
             if (inode_disk->indirect_block_sec == 0) {
+              //aloc free_map 
               if (free_map_allocate (1, &(inode_disk->indirect_block_sec))) {
                   /* 인덱스블록에새로할당받은블록번호저장*/
                   memset (new_block, 0, BLOCK_SECTOR_SIZE);
@@ -500,30 +517,35 @@ bool register_sector (struct inode_disk *inode_disk,
                         map_table_offset(sec_loc.index1));
             }
             break;
-
+        
         case DOUBLE_INDIRECT : //Indirect Double
+            
             new_block = malloc (BLOCK_SECTOR_SIZE);
-            if (new_block == NULL)
+            //malloc fail 
+            if (!new_block)
                 return false;
+
             /* 2차인덱스블록에새로할당받은블록주소저장후,
                각인덱스블록을buffer cache에기록*/
             if (inode_disk->double_indirect_block_sec == 0) {
+                //alloc free map
                 if (free_map_allocate (1, &(inode_disk->double_indirect_block_sec))) {
                     memset (new_block, 0, BLOCK_SECTOR_SIZE);
                     bc_write(inode_disk->double_indirect_block_sec, new_block, 0,
                             BLOCK_SECTOR_SIZE, 0);
                 }
-                else {
+                else {//No free map
                     free (new_block);
                     return false;
                 }
             }
-
+            //read indirect block
             bc_read(inode_disk->double_indirect_block_sec, 
                     &index_2nd_block, 0, sizeof(block_sector_t), 
                     map_table_offset(sec_loc.index1));
-
+            //write secont block 
             if (index_2nd_block == 0) {
+                //free map alloc
                 if (free_map_allocate (1, &index_2nd_block)) {
                     bc_write(inode_disk->double_indirect_block_sec, 
                             &index_2nd_block, 0, sizeof(block_sector_t),
@@ -533,7 +555,7 @@ bool register_sector (struct inode_disk *inode_disk,
                     bc_write(index_2nd_block, new_block, 0, 
                             BLOCK_SECTOR_SIZE, 0);
                 }
-                else {
+                else {//no free map alloc
                     free (new_block);
                     return false;
                 }
@@ -589,8 +611,9 @@ block_sector_t byte_to_sector (const struct inode_disk *inode_disk,
                   /* 2차인덱스블록에서디스크블록번호확인*/
                   result_sec = ind_block->map_table[sec_loc.index2];
               }
-              else
+              else {
                   result_sec = 0;
+              }
               free (ind_block);
               break;
 
@@ -606,10 +629,13 @@ block_sector_t byte_to_sector (const struct inode_disk *inode_disk,
 
 bool inode_update_file_length(struct inode_disk* inode_disk, 
                               off_t start_pos, off_t end_pos) {
+    
     block_sector_t sector_idx; 
     off_t offset = start_pos;
     int size = end_pos - start_pos + 1;
+    
     uint8_t *zeroes = calloc(sizeof(uint8_t), BLOCK_SECTOR_SIZE);
+
     if(zeroes == NULL)
         return false;
     /* 블록단위로loop을수행하며새로운디스크블록할당*/
@@ -619,27 +645,31 @@ bool inode_update_file_length(struct inode_disk* inode_disk,
 
         int sector_left = BLOCK_SECTOR_SIZE - sector_ofs;
         int chunk_size = size < sector_left ? size : sector_left;
+
         if (chunk_size <= 0)
             break;
-        if(sector_ofs > 0){
+
+        if (sector_ofs > 0) {
             /* 블록오프셋이0보다클경우, 이미할당된블록*/
             sector_idx = byte_to_sector(inode_disk, offset);
             ASSERT(sector_idx != 0);
-
+            //write at buffer cache
             bc_write(sector_idx, zeroes, 0, sector_left, sector_ofs);
         }
-        else{
+        else {
             /* 새로운디스크블록을할당*/
             if(free_map_allocate(1, &sector_idx)){
                 /* inode_disk에새로할당받은디스크블록번호업데이트*/
                 struct sector_location cur_loc;
                 locate_byte(offset, &cur_loc);
-                if(!register_sector(inode_disk, sector_idx, cur_loc)) {
+
+                //If no register sector
+                if (!register_sector (inode_disk, sector_idx, cur_loc)) {
                     free_map_release(sector_idx, 1);
                     free(zeroes);
                     return false;
                 }
-            } else {
+            } else {//If no allocate 
                 free(zeroes);
                 return false;
             }
@@ -654,14 +684,16 @@ bool inode_update_file_length(struct inode_disk* inode_disk,
 }
 
 void free_inode_sectors (struct inode_disk *inode_disk) {
+
     int i, j;
 
-    if (inode_disk->double_indirect_block_sec > 0)
-    {
+    if (inode_disk->double_indirect_block_sec > 0) {
+        
         struct inode_indirect_block *ind_block_1 = malloc (BLOCK_SECTOR_SIZE);
         struct inode_indirect_block *ind_block_2 = malloc (BLOCK_SECTOR_SIZE);
-        if (ind_block_1 == NULL || ind_block_2 == NULL) {
-            printf ("\nin (free_inode_sectors malloc) fail\n");
+        
+        if ( (!ind_block_1) || (!ind_block_2) ) {//fail malloc
+            printf ("malloc fail inode.c :690\n");
             return;
         }
         bc_read (inode_disk->double_indirect_block_sec, ind_block_1, 0, BLOCK_SECTOR_SIZE, 0);
@@ -689,16 +721,19 @@ void free_inode_sectors (struct inode_disk *inode_disk) {
     }
     /* Indirect 방식으로할당된디스크블록해지 */
     if (inode_disk->indirect_block_sec > 0) {
+        
         struct inode_indirect_block *ind_block = malloc (BLOCK_SECTOR_SIZE);
-        if (ind_block == NULL)
-        {
-            printf ("Cannot allocate a sector to hold ind-blocks. Free sectors failed!\n");
+
+        //malloc fail
+        if (!ind_block) {
+            printf ("\ninode.c :696 malloc fail\n");
             return;
         }
         /* 인덱스블록을buffer cache에서읽음*/
         bc_read (inode_disk->double_indirect_block_sec, ind_block, 0, BLOCK_SECTOR_SIZE, 0);
         i = 0;   
         /* 인덱스블록에저장된디스크블록번호를접근*/
+        
         while (ind_block->map_table[i] > 0) {
             /* free_map업데이트를통해디스크블록할당해지*/
             free_map_release (ind_block->map_table[i], 1);
@@ -718,3 +753,26 @@ void free_inode_sectors (struct inode_disk *inode_disk) {
 
 }
 
+bool inode_is_dir (const struct inode *inode) {
+    
+    bool result;
+
+    struct inode_disk *disk_inode;
+    
+    /* inode_disk 자료구조를 메모리에 할당 */
+    if ( !(disk_inode = malloc(sizeof(struct inode_disk)))) {
+        return 0;
+    }
+    /* in-memory inode의on-disk inode를읽어inode_disk에저장*/
+    bc_read(inode->sector, (void *)disk_inode, 0, BLOCK_SECTOR_SIZE, 0);
+    /* on-disk inode의is_dir을result에저장하여반환*/
+    result = disk_inode->is_dir;
+
+    free(disk_inode);
+
+    return result;
+}
+
+bool inode_is_removed(const struct inode *inode) {
+      return inode->removed;
+}
